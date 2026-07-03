@@ -1,106 +1,178 @@
-"""Ingestion Pipeline
+"""Ingestion pipeline orchestration."""
 
-数据摄取流水线，协调各组件完成文档到向量的转换。
-"""
-from typing import List, Optional
-
-from .types import Document, Chunk, ChunkRecord
+from pathlib import Path
+from typing import List, Callable, Optional
+from .types import Document, Chunk
 from .loaders.base import BaseLoader
-from .embedders.dense_embedder import DenseEmbedder
-from .embedders.sparse_encoder import BM25SparseEncoder
+from .batch_processor import BatchProcessor
+from .storage.vector_upserter import VectorUpserter
 from ..libs.splitter.base import BaseSplitter
-from ..libs.vector_store.base import BaseVectorStore
 
 
 class IngestionPipeline:
-    """数据摄取流水线
-
-    协调 Loader -> Splitter -> Embedder -> VectorStore。
+    """Orchestrate the complete ingestion process.
+    
+    Flow: Load → Split → Process → Upsert
     """
 
     def __init__(
         self,
         loader: BaseLoader,
         splitter: BaseSplitter,
-        dense_embedder: DenseEmbedder,
-        sparse_encoder: BM25SparseEncoder,
-        vector_store: BaseVectorStore
+        batch_processor: BatchProcessor,
+        vector_upserter: VectorUpserter,
+        batch_size: int = 32
     ):
-        """初始化 Pipeline
-
+        """Initialize IngestionPipeline.
+        
         Args:
-            loader: 文档加载器
-            splitter: 文本分块器
-            dense_embedder: 稠密向量编码器
-            sparse_encoder: 稀疏向量编码器
-            vector_store: 向量存储
+            loader: Document loader
+            splitter: Text splitter
+            batch_processor: Batch vector processor
+            vector_upserter: Vector store upserter
+            batch_size: Batch size for processing
         """
         self.loader = loader
         self.splitter = splitter
-        self.dense_embedder = dense_embedder
-        self.sparse_encoder = sparse_encoder
-        self.vector_store = vector_store
+        self.batch_processor = batch_processor
+        self.vector_upserter = vector_upserter
+        self.batch_size = batch_size
 
-    def ingest_file(self, file_path: str) -> int:
-        """摄取单个文件
-
+    def ingest_file(
+        self,
+        file_path: str | Path,
+        progress_callback: Optional[Callable[[str, int, int], None]] = None
+    ) -> dict:
+        """Ingest single file.
+        
         Args:
-            file_path: 文件路径
-
+            file_path: Path to file
+            progress_callback: Optional callback(stage, current, total)
+            
         Returns:
-            插入的 chunk 数量
+            Ingestion result summary
         """
-        # 1. 加载文档
-        doc = self.loader.load(file_path)
+        file_path = Path(file_path)
+        
+        try:
+            # Step 1: Load document
+            if progress_callback:
+                progress_callback("loading", 0, 1)
+            
+            document = self.loader.load(file_path)
+            
+            if progress_callback:
+                progress_callback("loading", 1, 1)
+            
+            # Step 2: Split into chunks
+            if progress_callback:
+                progress_callback("splitting", 0, 1)
+            
+            chunks = self._split_document(document)
+            
+            if progress_callback:
+                progress_callback("splitting", 1, 1)
+            
+            # Step 3: Process in batches
+            total_chunks = len(chunks)
+            processed = 0
+            
+            for i in range(0, total_chunks, self.batch_size):
+                batch = chunks[i:i + self.batch_size]
+                
+                if progress_callback:
+                    progress_callback("processing", processed, total_chunks)
+                
+                # Generate vectors
+                records = self.batch_processor.process_batch(batch)
+                
+                # Upload to vector store
+                success_count = self.vector_upserter.upsert_batch(records)
+                
+                processed += len(batch)
+                
+                if progress_callback:
+                    progress_callback("processing", processed, total_chunks)
+            
+            return {
+                "success": True,
+                "file": str(file_path),
+                "chunks_processed": total_chunks,
+                "chunks_uploaded": processed
+            }
+            
+        except Exception as e:
+            return {
+                "success": False,
+                "file": str(file_path),
+                "error": str(e)
+            }
 
-        # 2. 分块
-        chunk_texts = self.splitter.split(doc.text)
+    def ingest_files(
+        self,
+        file_paths: List[str | Path],
+        progress_callback: Optional[Callable[[str, int, int], None]] = None
+    ) -> dict:
+        """Ingest multiple files.
+        
+        Args:
+            file_paths: List of file paths
+            progress_callback: Optional callback(stage, current, total)
+            
+        Returns:
+            Batch ingestion summary
+        """
+        total_files = len(file_paths)
+        results = []
+        
+        for i, file_path in enumerate(file_paths):
+            if progress_callback:
+                progress_callback("file", i, total_files)
+            
+            result = self.ingest_file(file_path)
+            results.append(result)
+            
+            if progress_callback:
+                progress_callback("file", i + 1, total_files)
+        
+        # Summarize results
+        successful = sum(1 for r in results if r["success"])
+        total_chunks = sum(r.get("chunks_processed", 0) for r in results if r["success"])
+        
+        return {
+            "total_files": total_files,
+            "successful": successful,
+            "failed": total_files - successful,
+            "total_chunks": total_chunks,
+            "results": results
+        }
 
-        # 3. 创建 Chunks
+    def _split_document(self, document: Document) -> List[Chunk]:
+        """Split document into chunks.
+        
+        Args:
+            document: Document to split
+            
+        Returns:
+            List of chunks
+        """
+        # Split text
+        text_chunks = self.splitter.split(document.text)
+        
+        # Convert to Chunk objects
         chunks = []
-        for idx, text in enumerate(chunk_texts):
+        for i, text in enumerate(text_chunks):
             chunk = Chunk(
-                id=f"{doc.id}_chunk_{idx}",
+                id=f"{document.id}_chunk_{i}",
                 text=text,
-                doc_id=doc.id,
-                chunk_index=idx,
-                metadata={**doc.metadata, "chunk_index": idx}
+                doc_id=document.id,
+                chunk_index=i,
+                metadata={
+                    **document.metadata,
+                    "chunk_index": i,
+                    "total_chunks": len(text_chunks)
+                }
             )
             chunks.append(chunk)
-
-        # 4. 向量化
-        ids = [c.id for c in chunks]
-        texts = [c.text for c in chunks]
-
-        # 稠密向量
-        dense_vectors = self.dense_embedder.encode_batch(texts)
-
-        # 稀疏向量
-        sparse_vectors = [self.sparse_encoder.encode(text) for text in texts]
-
-        # 5. 存储
-        metadata_list = [c.metadata for c in chunks]
-        self.vector_store.upsert(
-            ids=ids,
-            texts=texts,
-            dense_vectors=dense_vectors,
-            sparse_vectors=sparse_vectors,
-            metadata=metadata_list
-        )
-
-        return len(chunks)
-
-    def ingest_batch(self, file_paths: List[str]) -> int:
-        """批量摄取文件
-
-        Args:
-            file_paths: 文件路径列表
-
-        Returns:
-            总插入的 chunk 数量
-        """
-        total = 0
-        for file_path in file_paths:
-            count = self.ingest_file(file_path)
-            total += count
-        return total
+        
+        return chunks

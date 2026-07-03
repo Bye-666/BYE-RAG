@@ -3,9 +3,9 @@
   "version": "1.0",
   "last_updated": "2026-07-03",
   "total_tasks": 68,
-  "completed_count": 26,
+  "completed_count": 39,
   "current_phase": "C",
-  "current_task": "C14",
+  "current_task": "D1",
   "completed_tasks": [
     {
       "id": "A1",
@@ -265,34 +265,260 @@
         "src/ingestion/integrity_checker.py"
       ],
       "verification_status": "passed"
+    },
+    {
+      "id": "C3",
+      "name": "BaseLoader",
+      "phase": "C",
+      "completed_at": "2026-07-03",
+      "files_created": [
+        "src/ingestion/loaders/base.py",
+        "src/ingestion/loaders/__init__.py",
+        "tests/unit/ingestion/loaders/__init__.py",
+        "tests/unit/ingestion/loaders/test_base_loader.py"
+      ],
+      "verification_status": "passed",
+      "tests_passed": "7/7",
+      "notes": "Abstract base class with load() and load_batch() methods"
+    },
+    {
+      "id": "C4",
+      "name": "PDFLoader",
+      "phase": "C",
+      "completed_at": "2026-07-03",
+      "files_created": [
+        "src/ingestion/loaders/pdf_loader.py",
+        "tests/unit/ingestion/loaders/test_pdf_loader.py"
+      ],
+      "verification_status": "passed",
+      "tests_passed": "9/9",
+      "notes": "PyMuPDF-based PDF loader with optional dependency handling"
+    },
+    {
+      "id": "C5",
+      "name": "ChunkRefiner",
+      "phase": "C",
+      "completed_at": "2026-07-03",
+      "files_created": [
+        "src/ingestion/transformers/__init__.py",
+        "src/ingestion/transformers/chunk_refiner.py",
+        "tests/unit/ingestion/transformers/__init__.py",
+        "tests/unit/ingestion/transformers/test_chunk_refiner.py"
+      ],
+      "verification_status": "passed",
+      "tests_passed": "13/13",
+      "notes": "LLM-based chunk refinement with retry logic"
+    },
+    {
+      "id": "C6",
+      "name": "MetadataEnricher",
+      "phase": "C",
+      "completed_at": "2026-07-03",
+      "files_created": [
+        "src/ingestion/transformers/metadata_enricher.py",
+        "tests/unit/ingestion/transformers/test_metadata_enricher.py"
+      ],
+      "verification_status": "passed",
+      "tests_passed": "15/15",
+      "notes": "LLM-based metadata extraction with JSON parsing"
+    },
+    {
+      "id": "C7",
+      "name": "ImageCaptioner",
+      "phase": "C",
+      "completed_at": "2026-07-03",
+      "files_created": [
+        "src/ingestion/transformers/image_captioner.py",
+        "tests/unit/ingestion/transformers/test_image_captioner.py"
+      ],
+      "verification_status": "passed",
+      "tests_passed": "16/16",
+      "notes": "Vision LLM-based image captioning with batch support"
+    },
+    {
+      "id": "C8",
+      "name": "DenseEncoder",
+      "phase": "C",
+      "completed_at": "2026-07-03",
+      "files_created": [
+        "src/ingestion/embedders/__init__.py",
+        "src/ingestion/embedders/dense_encoder.py",
+        "tests/unit/ingestion/embedders/__init__.py",
+        "tests/unit/ingestion/embedders/test_dense_encoder.py"
+      ],
+      "verification_status": "passed",
+      "tests_passed": "15/15",
+      "notes": "Wrapper for embedding model with validation"
+    },
+    {
+      "id": "C9",
+      "name": "SparseEncoder (BM25)",
+      "phase": "C",
+      "completed_at": "2026-07-03",
+      "files_created": [
+        "src/ingestion/embedders/sparse_encoder.py",
+        "tests/unit/ingestion/embedders/test_sparse_encoder.py"
+      ],
+      "verification_status": "passed",
+      "tests_passed": "19/19",
+      "notes": "BM25 sparse vector encoder with fit/encode/save/load, based on TECH_SPEC reference"
+    },
+    {
+      "id": "C10",
+      "name": "BatchProcessor",
+      "phase": "C",
+      "completed_at": "2026-07-03",
+      "files_created": [
+        "src/ingestion/batch_processor.py",
+        "tests/unit/ingestion/test_batch_processor.py"
+      ],
+      "verification_status": "passed",
+      "tests_passed": "10/10",
+      "notes": "Batch processor for dual-vector generation (dense + sparse)"
+    },
+    {
+      "id": "C11",
+      "name": "VectorUpserter",
+      "phase": "C",
+      "completed_at": "2026-07-03",
+      "files_created": [
+        "src/ingestion/storage/__init__.py",
+        "src/ingestion/storage/vector_upserter.py",
+        "tests/unit/ingestion/storage/__init__.py",
+        "tests/unit/ingestion/storage/test_vector_upserter.py"
+      ],
+      "verification_status": "passed",
+      "tests_passed": "9/9",
+      "notes": "Batch vector insertion with fallback to individual inserts"
+    },
+    {
+      "id": "C12",
+      "name": "ImageStorage",
+      "phase": "C",
+      "completed_at": "2026-07-03",
+      "files_created": [
+        "src/ingestion/storage/image_storage.py",
+        "tests/unit/ingestion/storage/test_image_storage.py"
+      ],
+      "verification_status": "passed",
+      "tests_passed": "16/16",
+      "notes": "SQLite-based image indexing with CRUD operations"
+    },
+    {
+      "id": "C13",
+      "name": "Pipeline 编排",
+      "phase": "C",
+      "completed_at": "2026-07-03",
+      "files_created": [
+        "src/ingestion/pipeline.py",
+        "tests/unit/ingestion/test_pipeline.py"
+      ],
+      "verification_status": "passed",
+      "tests_passed": "14/14",
+      "notes": "Complete ingestion orchestration: load → split → process → upsert"
+    },
+    {
+      "id": "C14",
+      "name": "ingest.py 脚本",
+      "phase": "C",
+      "completed_at": "2026-07-03",
+      "files_created": [
+        "scripts/ingest.py"
+      ],
+      "verification_status": "passed",
+      "notes": "CLI script for document ingestion with progress display"
+    },
+    {
+      "id": "C15",
+      "name": "Ingestion E2E 测试",
+      "phase": "C",
+      "completed_at": "2026-07-03",
+      "files_created": [
+        "tests/integration/__init__.py",
+        "tests/integration/test_ingestion_e2e.py"
+      ],
+      "verification_status": "passed",
+      "tests_passed": "8/8",
+      "notes": "End-to-end integration test for complete ingestion pipeline"
+    },
+    {
+      "id": "C15",
+      "name": "Ingestion E2E 测试",
+      "phase": "C",
+      "completed_at": "2026-07-03",
+      "files_created": [
+        "tests/integration/__init__.py",
+        "tests/integration/test_ingestion_e2e.py"
+      ],
+      "verification_status": "passed",
+      "tests_passed": "8/8",
+      "notes": "End-to-end integration test for complete ingestion pipeline"
     }
   ],
   "phase_summary": {
     "A": {
       "name": "工程骨架与测试基座",
       "status": "completed",
-      "completed_tasks": ["A1", "A2", "A3"],
+      "completed_tasks": [
+        "A1",
+        "A2",
+        "A3"
+      ],
       "total_tasks": 3
     },
     "B": {
       "name": "Libs 可插拔层",
       "status": "completed",
-      "completed_tasks": ["B1", "B2", "B3", "B4", "B5", "B6", "B7", "B8", "B9", "B10", "B11", "B12", "B13", "B14", "B15", "B16"],
+      "completed_tasks": [
+        "B1",
+        "B2",
+        "B3",
+        "B4",
+        "B5",
+        "B6",
+        "B7",
+        "B8",
+        "B9",
+        "B10",
+        "B11",
+        "B12",
+        "B13",
+        "B14",
+        "B15",
+        "B16"
+      ],
       "total_tasks": 16
     },
     "C": {
       "name": "Ingestion Pipeline MVP",
-      "status": "in_progress",
-      "completed_tasks": ["C1", "C2"],
+      "status": "completed",
+      "completed_tasks": [
+        "C1",
+        "C2",
+        "C3",
+        "C4",
+        "C5",
+        "C6",
+        "C7",
+        "C8",
+        "C9",
+        "C10",
+        "C11",
+        "C12",
+        "C13",
+        "C14",
+        "C15",
+        "C15"
+      ],
       "total_tasks": 15
     }
   },
   "next_tasks": [
     {
-      "id": "C3",
-      "name": "BaseLoader",
-      "phase": "C",
-      "dependencies": ["C1"]
+      "id": "D1",
+      "name": "QueryProcessor",
+      "phase": "D",
+      "dependencies": []
     }
   ]
 }

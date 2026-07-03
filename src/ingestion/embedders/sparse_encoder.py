@@ -1,110 +1,133 @@
-"""BM25 稀疏向量编码器
+"""BM25 sparse vector encoding."""
 
-基于 BM25 算法生成稀疏向量，用于混合检索。
-"""
+import math
 import pickle
+from pathlib import Path
 from collections import Counter
-from typing import Dict, List
-
-import numpy as np
+from typing import Dict, List, Any
 
 
 class BM25SparseEncoder:
-    """BM25 稀疏编码器
-
-    在文档集合上训练 IDF，为每个文档生成稀疏向量。
+    """BM25 sparse vector encoder.
+    
+    Converts traditional BM25 algorithm output into sparse vector format
+    compatible with Milvus sparse vector index.
+    
+    BM25 formula: score = idf * (tf * (k1 + 1)) / (tf + k1 * (1 - b + b * dl / avgdl))
+    where:
+    - idf: inverse document frequency
+    - tf: term frequency in document
+    - dl: document length
+    - avgdl: average document length
+    - k1: term frequency saturation parameter (default: 1.5)
+    - b: length normalization parameter (default: 0.75)
     """
 
     def __init__(self, k1: float = 1.5, b: float = 0.75):
-        """初始化编码器
-
+        """Initialize BM25SparseEncoder.
+        
         Args:
-            k1: BM25 参数 k1
-            b: BM25 参数 b
+            k1: Term frequency saturation parameter (1.2-2.0)
+            b: Length normalization parameter (0-1)
         """
         self.k1 = k1
         self.b = b
-        self.vocab = {}
-        self.idf = {}
-        self.avgdl = 0.0
-        self.doc_count = 0
+        self.vocab: Dict[str, int] = {}  # term -> term_id mapping
+        self.idf: Dict[int, float] = {}  # term_id -> idf value
+        self.avgdl: float = 0  # average document length
+        self.doc_count: int = 0  # total number of documents
 
-    def fit(self, texts: List[str]) -> None:
-        """在文档集合上训练
-
+    def fit(self, documents: List[str]):
+        """Train on document collection to build vocabulary and IDF.
+        
         Args:
-            texts: 文档文本列表
+            documents: List of text documents
         """
-        self.doc_count = len(texts)
+        if not documents:
+            raise ValueError("Cannot fit on empty document list")
+        
         doc_lengths = []
-        term_doc_freq = Counter()
-
-        # 统计词频和文档长度
-        for text in texts:
-            terms = self._tokenize(text)
+        term_doc_freq = Counter()  # count documents containing each term
+        
+        # Count term frequencies and document lengths
+        for doc in documents:
+            terms = self._tokenize(doc)
             doc_lengths.append(len(terms))
             unique_terms = set(terms)
+            
+            # Assign ID to new terms
             for term in unique_terms:
+                if term not in self.vocab:
+                    self.vocab[term] = len(self.vocab)
                 term_doc_freq[term] += 1
-
-        # 计算平均文档长度
-        self.avgdl = np.mean(doc_lengths)
-
-        # 构建词表和 IDF
-        for idx, (term, df) in enumerate(term_doc_freq.items()):
-            self.vocab[term] = idx
-            # IDF 公式
-            self.idf[idx] = np.log((self.doc_count - df + 0.5) / (df + 0.5) + 1.0)
+        
+        self.doc_count = len(documents)
+        self.avgdl = sum(doc_lengths) / self.doc_count if self.doc_count > 0 else 0
+        
+        # Calculate IDF: log((N - df + 0.5) / (df + 0.5) + 1)
+        for term, term_id in self.vocab.items():
+            df = term_doc_freq[term]
+            idf_value = math.log((self.doc_count - df + 0.5) / (df + 0.5) + 1)
+            self.idf[term_id] = idf_value
 
     def encode(self, text: str) -> Dict[str, List]:
-        """将文本编码为稀疏向量
-
+        """Encode text into sparse vector.
+        
         Args:
-            text: 输入文本
-
+            text: Text to encode
+            
         Returns:
-            稀疏向量格式：{"indices": [...], "values": [...]}
+            Sparse vector in Milvus format: {"indices": [...], "values": [...]}
         """
+        if not self.vocab:
+            raise RuntimeError("Encoder not fitted. Call fit() first.")
+        
         terms = self._tokenize(text)
         term_freq = Counter(terms)
         doc_len = len(terms)
-
+        
         indices = []
         values = []
-
+        
         for term, tf in term_freq.items():
             if term in self.vocab:
                 term_id = self.vocab[term]
-                idf = self.idf[term_id]
-
-                # BM25 公式
+                idf_value = self.idf[term_id]
+                
+                # BM25 formula
                 numerator = tf * (self.k1 + 1)
                 denominator = tf + self.k1 * (1 - self.b + self.b * doc_len / self.avgdl)
-                score = idf * (numerator / denominator)
-
+                score = idf_value * (numerator / denominator)
+                
                 indices.append(term_id)
-                values.append(float(score))
-
+                values.append(score)
+        
+        # Return Milvus sparse vector format
         return {"indices": indices, "values": values}
 
     def _tokenize(self, text: str) -> List[str]:
-        """分词
-
+        """Tokenize text into terms.
+        
+        Simple whitespace splitting for prototype.
+        Production should use jieba or other professional tokenizers.
+        
         Args:
-            text: 输入文本
-
+            text: Text to tokenize
+            
         Returns:
-            词列表
+            List of terms
         """
-        # 简单空格分词（生产环境应使用 jieba）
         return text.lower().split()
 
-    def save(self, path: str) -> None:
-        """持久化编码器
-
+    def save(self, path: str | Path):
+        """Persist vocabulary and IDF to disk.
+        
         Args:
-            path: 保存路径
+            path: Path to save file
         """
+        path = Path(path)
+        path.parent.mkdir(parents=True, exist_ok=True)
+        
         with open(path, 'wb') as f:
             pickle.dump({
                 'vocab': self.vocab,
@@ -116,18 +139,22 @@ class BM25SparseEncoder:
             }, f)
 
     @classmethod
-    def load(cls, path: str) -> 'BM25SparseEncoder':
-        """加载已训练的编码器
-
+    def load(cls, path: str | Path) -> 'BM25SparseEncoder':
+        """Load trained encoder from disk.
+        
         Args:
-            path: 模型路径
-
+            path: Path to saved encoder file
+            
         Returns:
-            编码器实例
+            Loaded encoder instance
         """
+        path = Path(path)
+        if not path.exists():
+            raise FileNotFoundError(f"Encoder file not found: {path}")
+        
         with open(path, 'rb') as f:
             data = pickle.load(f)
-
+        
         encoder = cls(k1=data['k1'], b=data['b'])
         encoder.vocab = data['vocab']
         encoder.idf = data['idf']
