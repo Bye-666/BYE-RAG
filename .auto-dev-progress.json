@@ -3,9 +3,9 @@
   "version": "1.0",
   "last_updated": "2026-07-03",
   "total_tasks": 68,
-  "completed_count": 21,
+  "completed_count": 22,
   "current_phase": "C",
-  "current_task": "C3",
+  "current_task": "C4",
   "completed_tasks": [
     {
       "id": "A1",
@@ -255,6 +255,16 @@
         "src/ingestion/types.py"
       ],
       "verification_status": "passed"
+    },
+    {
+      "id": "C2",
+      "name": "FileIntegrityChecker",
+      "phase": "C",
+      "completed_at": "2026-07-03",
+      "files_created": [
+        "src/ingestion/integrity_checker.py"
+      ],
+      "verification_status": "passed"
     }
   ],
   "phase_summary": {
@@ -273,14 +283,14 @@
     "C": {
       "name": "Ingestion Pipeline MVP",
       "status": "in_progress",
-      "completed_tasks": ["C1"],
+      "completed_tasks": ["C1", "C2"],
       "total_tasks": 15
     }
   },
   "next_tasks": [
     {
-      "id": "C2",
-      "name": "FileIntegrityChecker",
+      "id": "C3",
+      "name": "BaseLoader",
       "phase": "C",
       "dependencies": ["C1"]
     }
