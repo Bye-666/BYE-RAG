@@ -3,9 +3,9 @@
   "version": "1.0",
   "last_updated": "2026-07-03",
   "total_tasks": 68,
-  "completed_count": 15,
+  "completed_count": 16,
   "current_phase": "B",
-  "current_task": "B13",
+  "current_task": "B14",
   "completed_tasks": [
     {
       "id": "A1",
@@ -190,6 +190,27 @@
         "src/libs/reranker/base.py"
       ],
       "verification_status": "passed"
+    },
+    {
+      "id": "B12",
+      "name": "CrossEncoderReranker",
+      "phase": "B",
+      "completed_at": "2026-07-03",
+      "files_created": [
+        "src/libs/reranker/cross_encoder.py"
+      ],
+      "verification_status": "passed"
+    },
+    {
+      "id": "B13",
+      "name": "BaseEvaluator",
+      "phase": "B",
+      "completed_at": "2026-07-03",
+      "files_created": [
+        "src/libs/evaluator/__init__.py",
+        "src/libs/evaluator/base.py"
+      ],
+      "verification_status": "passed"
     }
   ],
   "phase_summary": {
@@ -202,16 +223,16 @@
     "B": {
       "name": "Libs 可插拔层",
       "status": "in_progress",
-      "completed_tasks": ["B1", "B2", "B3", "B4", "B5", "B6", "B7", "B8", "B9", "B10", "B11"],
+      "completed_tasks": ["B1", "B2", "B3", "B4", "B5", "B6", "B7", "B8", "B9", "B10", "B11", "B12", "B13"],
       "total_tasks": 16
     }
   },
   "next_tasks": [
     {
-      "id": "B12",
-      "name": "CrossEncoderReranker",
+      "id": "B14",
+      "name": "Factory 模式",
       "phase": "B",
-      "dependencies": ["B11"]
+      "dependencies": ["B2", "B4", "B10"]
     }
   ]
 }
