@@ -72,6 +72,51 @@ class MCPServer:
                         "type": "object",
                         "properties": {}
                     }
+                ),
+                Tool(
+                    name="query_knowledge_hub",
+                    description="Query a specific knowledge collection",
+                    inputSchema={
+                        "type": "object",
+                        "properties": {
+                            "collection": {
+                                "type": "string",
+                                "description": "Collection name"
+                            },
+                            "query": {
+                                "type": "string",
+                                "description": "Query text"
+                            },
+                            "top_k": {
+                                "type": "integer",
+                                "description": "Number of results",
+                                "default": 10
+                            }
+                        },
+                        "required": ["collection", "query"]
+                    }
+                ),
+                Tool(
+                    name="list_collections",
+                    description="List all available knowledge collections",
+                    inputSchema={
+                        "type": "object",
+                        "properties": {}
+                    }
+                ),
+                Tool(
+                    name="get_document_summary",
+                    description="Get summary of a specific document",
+                    inputSchema={
+                        "type": "object",
+                        "properties": {
+                            "doc_id": {
+                                "type": "string",
+                                "description": "Document ID"
+                            }
+                        },
+                        "required": ["doc_id"]
+                    }
                 )
             ]
 
@@ -81,13 +126,22 @@ class MCPServer:
             
             if name == "ingest_document":
                 return await self._handle_ingest(arguments)
-            
+
             elif name == "query":
                 return await self._handle_query(arguments)
-            
+
             elif name == "list_documents":
                 return await self._handle_list_documents(arguments)
-            
+
+            elif name == "query_knowledge_hub":
+                return await self._handle_query_knowledge_hub(arguments)
+
+            elif name == "list_collections":
+                return await self._handle_list_collections(arguments)
+
+            elif name == "get_document_summary":
+                return await self._handle_get_document_summary(arguments)
+
             else:
                 return [TextContent(
                     type="text",
@@ -181,3 +235,90 @@ class MCPServer:
                 )
         
         asyncio.run(main())
+
+    async def _handle_query_knowledge_hub(self, args: Dict[str, Any]) -> List[TextContent]:
+        """Handle knowledge hub query.
+
+        Args:
+            args: Tool arguments
+
+        Returns:
+            Response content
+        """
+        collection = args.get("collection")
+        query = args.get("query")
+        top_k = args.get("top_k", 10)
+
+        # TODO: Implement actual collection-specific query
+        result = {
+            "collection": collection,
+            "query": query,
+            "top_k": top_k,
+            "results": [
+                {
+                    "id": f"{collection}_doc1",
+                    "text": f"Result from {collection} collection",
+                    "score": 0.92
+                }
+            ]
+        }
+
+        return [TextContent(
+            type="text",
+            text=json.dumps(result, indent=2)
+        )]
+
+    async def _handle_list_collections(self, args: Dict[str, Any]) -> List[TextContent]:
+        """Handle list collections.
+
+        Args:
+            args: Tool arguments
+
+        Returns:
+            Response content
+        """
+        # TODO: Implement actual collection listing from vector store
+        result = {
+            "total": 3,
+            "collections": [
+                {"name": "default", "doc_count": 10, "last_updated": "2026-07-03"},
+                {"name": "technical", "doc_count": 25, "last_updated": "2026-07-03"},
+                {"name": "general", "doc_count": 15, "last_updated": "2026-07-03"}
+            ]
+        }
+
+        return [TextContent(
+            type="text",
+            text=json.dumps(result, indent=2)
+        )]
+
+    async def _handle_get_document_summary(self, args: Dict[str, Any]) -> List[TextContent]:
+        """Handle get document summary.
+
+        Args:
+            args: Tool arguments
+
+        Returns:
+            Response content
+        """
+        doc_id = args.get("doc_id")
+
+        # TODO: Implement actual summary retrieval from metadata
+        result = {
+            "doc_id": doc_id,
+            "title": "Document Title",
+            "summary": "This document contains information about...",
+            "chunks": 10,
+            "created_at": "2026-07-03T10:00:00",
+            "file_path": f"/path/to/{doc_id}.pdf",
+            "metadata": {
+                "pages": 5,
+                "author": "Unknown",
+                "language": "zh"
+            }
+        }
+
+        return [TextContent(
+            type="text",
+            text=json.dumps(result, indent=2)
+        )]
