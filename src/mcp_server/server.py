@@ -1,29 +1,104 @@
 """MCP Server for RAG system."""
 
 from typing import List, Dict, Any, Optional
+from pathlib import Path
 from mcp.server import Server
-from mcp.types import Tool, TextContent
+from mcp.types import Tool, TextContent, ImageContent
 import json
+import sys
+
+# Add project root to path
+project_root = Path(__file__).parent.parent.parent
+sys.path.insert(0, str(project_root))
+
+from src.config.settings import Settings
+from src.libs.loader import ComponentLoader
+from src.ingestion.pipeline import IngestionPipeline
+from src.ingestion.loaders.pdf_loader import PDFLoader
+from src.ingestion.batch_processor import BatchProcessor
+from src.ingestion.storage.vector_upserter import VectorUpserter
+from src.ingestion.embedders.sparse_encoder import BM25SparseEncoder
+from src.retrieval.query_processor import QueryProcessor
+from src.retrieval.hybrid_search import HybridSearch
+from src.retrieval.retrievers.dense_retriever import DenseRetriever
+from src.retrieval.retrievers.sparse_retriever import SparseRetriever
+from src.retrieval.reranker_module import RerankerModule
 
 
 class MCPServer:
     """MCP Server exposing RAG tools to Claude Desktop.
-    
+
     Provides tools for:
     - Document ingestion
     - Query and retrieval
     - System management
     """
 
-    def __init__(self, config: Optional[Dict[str, Any]] = None):
+    def __init__(self, config_path: Optional[str] = None):
         """Initialize MCP Server.
-        
+
         Args:
-            config: Optional configuration dictionary
+            config_path: Optional path to configuration file
         """
-        self.config = config or {}
+        # Load configuration
+        if config_path:
+            self.config = Settings.from_yaml(config_path)
+        else:
+            self.config = Settings()
+
+        # Initialize components
+        self._init_components()
+
+        # Initialize MCP server
         self.server = Server("rag-mcp-server")
         self._register_tools()
+
+    def _init_components(self):
+        """Initialize RAG system components."""
+        self.component_loader = ComponentLoader(self.config)
+
+        # Core components
+        self.llm = self.component_loader.get_llm()
+        self.embedding = self.component_loader.get_embedding()
+        self.vector_store = self.component_loader.get_vector_store()
+        self.splitter = self.component_loader.get_splitter()
+        self.reranker = self.component_loader.get_reranker()
+
+        # Load or create BM25 encoder
+        self.sparse_encoder_path = Path("data/db/bm25_encoder.pkl")
+        if self.sparse_encoder_path.exists():
+            self.sparse_encoder = BM25SparseEncoder.load(self.sparse_encoder_path)
+        else:
+            self.sparse_encoder = BM25SparseEncoder()
+            self.sparse_encoder_path.parent.mkdir(parents=True, exist_ok=True)
+
+        # Ingestion pipeline
+        self.pdf_loader = PDFLoader()
+        self.batch_processor = BatchProcessor(
+            dense_encoder=self.embedding,
+            sparse_encoder=self.sparse_encoder
+        )
+        self.vector_upserter = VectorUpserter(self.vector_store)
+
+        self.ingestion_pipeline = IngestionPipeline(
+            loader=self.pdf_loader,
+            splitter=self.splitter,
+            batch_processor=self.batch_processor,
+            vector_upserter=self.vector_upserter,
+            enable_transform=False  # Disable transform for speed (enable if needed)
+        )
+
+        # Query pipeline
+        self.query_processor = QueryProcessor(
+            llm=self.llm,
+            embedding=self.embedding,
+            sparse_encoder=self.sparse_encoder
+        )
+
+        self.dense_retriever = DenseRetriever(self.vector_store)
+        self.sparse_retriever = SparseRetriever(self.vector_store)
+        self.hybrid_search = HybridSearch(self.dense_retriever, self.sparse_retriever)
+        self.reranker_module = RerankerModule(self.reranker)
 
     def _register_tools(self):
         """Register all MCP tools."""
@@ -150,76 +225,180 @@ class MCPServer:
 
     async def _handle_ingest(self, args: Dict[str, Any]) -> List[TextContent]:
         """Handle document ingestion.
-        
+
         Args:
             args: Tool arguments
-            
+
         Returns:
             Response content
         """
         file_path = args.get("file_path")
-        
-        # TODO: Implement actual ingestion
-        result = {
-            "status": "success",
-            "message": f"Document ingested: {file_path}",
-            "file_path": file_path
-        }
-        
-        return [TextContent(
-            type="text",
-            text=json.dumps(result, indent=2)
-        )]
+
+        try:
+            # Validate file exists
+            path = Path(file_path)
+            if not path.exists():
+                result = {
+                    "status": "error",
+                    "message": f"File not found: {file_path}"
+                }
+                return [TextContent(type="text", text=json.dumps(result, indent=2))]
+
+            # Ingest document
+            ingest_result = self.ingestion_pipeline.ingest_file(file_path)
+
+            if ingest_result["success"]:
+                # Save BM25 encoder after successful ingestion
+                self.sparse_encoder.save(self.sparse_encoder_path)
+
+                result = {
+                    "status": "success",
+                    "message": f"Document ingested successfully",
+                    "file_path": str(file_path),
+                    "chunks_processed": ingest_result["chunks_processed"],
+                    "chunks_uploaded": ingest_result["chunks_uploaded"]
+                }
+            else:
+                result = {
+                    "status": "error",
+                    "message": f"Ingestion failed: {ingest_result.get('error', 'Unknown error')}",
+                    "file_path": str(file_path)
+                }
+
+        except Exception as e:
+            result = {
+                "status": "error",
+                "message": f"Error during ingestion: {str(e)}",
+                "file_path": str(file_path)
+            }
+
+        return [TextContent(type="text", text=json.dumps(result, indent=2))]
 
     async def _handle_query(self, args: Dict[str, Any]) -> List[TextContent]:
         """Handle query.
-        
+
         Args:
             args: Tool arguments
-            
+
         Returns:
             Response content
         """
         query = args.get("query")
         top_k = args.get("top_k", 10)
-        
-        # TODO: Implement actual query
-        result = {
-            "query": query,
-            "top_k": top_k,
-            "results": [
-                {
-                    "id": "doc1",
-                    "text": "Sample result 1",
-                    "score": 0.95
+        rerank = args.get("rerank", True)  # Enable reranking by default
+
+        try:
+            # Check if BM25 encoder is trained
+            if not self.sparse_encoder_path.exists():
+                result = {
+                    "status": "error",
+                    "message": "System not ready. Please ingest documents first.",
+                    "query": query
                 }
-            ]
-        }
-        
-        return [TextContent(
-            type="text",
-            text=json.dumps(result, indent=2)
-        )]
+                return [TextContent(type="text", text=json.dumps(result, indent=2))]
+
+            # Process query
+            processed = self.query_processor.process(query, rewrite=False)
+
+            # Hybrid search
+            search_results = self.hybrid_search.search(
+                dense_vector=processed["dense_vector"],
+                sparse_vector=processed["sparse_vector"],
+                top_k=top_k * 2 if rerank else top_k  # Get more for reranking
+            )
+
+            # Rerank if enabled and reranker available
+            if rerank and self.reranker:
+                search_results = self.reranker_module.rerank(
+                    query=query,
+                    results=search_results,
+                    top_k=top_k
+                )
+            else:
+                search_results = search_results[:top_k]
+
+            # Format results
+            formatted_results = []
+            for r in search_results:
+                formatted_results.append({
+                    "id": r.get("id"),
+                    "text": r.get("text", "")[:500],  # Truncate for readability
+                    "score": r.get("rrf_score") or r.get("rerank_score", 0.0),
+                    "metadata": r.get("metadata", {})
+                })
+
+            result = {
+                "status": "success",
+                "query": query,
+                "total_results": len(formatted_results),
+                "results": formatted_results
+            }
+
+        except Exception as e:
+            result = {
+                "status": "error",
+                "message": f"Query failed: {str(e)}",
+                "query": query
+            }
+
+        return [TextContent(type="text", text=json.dumps(result, indent=2))]
 
     async def _handle_list_documents(self, args: Dict[str, Any]) -> List[TextContent]:
         """Handle document listing.
-        
+
         Args:
             args: Tool arguments
-            
+
         Returns:
             Response content
         """
-        # TODO: Implement actual listing
-        result = {
-            "total": 0,
-            "documents": []
-        }
-        
-        return [TextContent(
-            type="text",
-            text=json.dumps(result, indent=2)
-        )]
+        try:
+            # Query vector store for unique documents
+            # Get a sample of documents by querying with empty filter
+            stats = self.vector_store.get_collection_stats()
+
+            # Try to get unique doc_ids from vector store
+            # This is a simple implementation - in production you'd want a proper document index
+            unique_docs = {}
+
+            # Sample query to get documents (limitation: we can't list all without querying)
+            # Alternative: maintain a separate document registry
+            sample_results = self.vector_store.query(
+                collection_name=self.config.milvus.collection_name,
+                data=[[0.0] * self.config.milvus.dense_dim],  # Dummy query
+                limit=100,
+                output_fields=["id", "doc_id", "metadata"]
+            )
+
+            if sample_results and len(sample_results) > 0:
+                for result in sample_results[0]:
+                    doc_id = result.get("entity", {}).get("doc_id")
+                    if doc_id and doc_id not in unique_docs:
+                        metadata = result.get("entity", {}).get("metadata", {})
+                        unique_docs[doc_id] = {
+                            "doc_id": doc_id,
+                            "file_path": metadata.get("file_path", "Unknown"),
+                            "chunks": 1  # Will be updated
+                        }
+                    elif doc_id:
+                        unique_docs[doc_id]["chunks"] += 1
+
+            result = {
+                "status": "success",
+                "total": len(unique_docs),
+                "total_chunks": stats.get("row_count", 0) if stats else 0,
+                "documents": list(unique_docs.values())
+            }
+
+        except Exception as e:
+            result = {
+                "status": "error",
+                "message": f"Failed to list documents: {str(e)}",
+                "total": 0,
+                "documents": []
+            }
+
+        return [TextContent(type="text", text=json.dumps(result, indent=2))]
 
     def run(self):
         """Run the MCP server."""
@@ -249,24 +428,48 @@ class MCPServer:
         query = args.get("query")
         top_k = args.get("top_k", 10)
 
-        # TODO: Implement actual collection-specific query
-        result = {
-            "collection": collection,
-            "query": query,
-            "top_k": top_k,
-            "results": [
-                {
-                    "id": f"{collection}_doc1",
-                    "text": f"Result from {collection} collection",
-                    "score": 0.92
-                }
-            ]
-        }
+        try:
+            # Process query
+            processed = self.query_processor.process(query, rewrite=False)
 
-        return [TextContent(
-            type="text",
-            text=json.dumps(result, indent=2)
-        )]
+            # Create filter for specific collection
+            filter_dict = {"collection": collection} if collection != "default" else None
+
+            # Hybrid search with filter
+            search_results = self.hybrid_search.search(
+                dense_vector=processed["dense_vector"],
+                sparse_vector=processed["sparse_vector"],
+                top_k=top_k,
+                filter_dict=filter_dict
+            )
+
+            # Format results
+            formatted_results = []
+            for r in search_results:
+                formatted_results.append({
+                    "id": r.get("id"),
+                    "text": r.get("text", "")[:500],
+                    "score": r.get("rrf_score", 0.0),
+                    "metadata": r.get("metadata", {})
+                })
+
+            result = {
+                "status": "success",
+                "collection": collection,
+                "query": query,
+                "total_results": len(formatted_results),
+                "results": formatted_results
+            }
+
+        except Exception as e:
+            result = {
+                "status": "error",
+                "message": f"Query failed: {str(e)}",
+                "collection": collection,
+                "query": query
+            }
+
+        return [TextContent(type="text", text=json.dumps(result, indent=2))]
 
     async def _handle_list_collections(self, args: Dict[str, Any]) -> List[TextContent]:
         """Handle list collections.
@@ -277,20 +480,37 @@ class MCPServer:
         Returns:
             Response content
         """
-        # TODO: Implement actual collection listing from vector store
-        result = {
-            "total": 3,
-            "collections": [
-                {"name": "default", "doc_count": 10, "last_updated": "2026-07-03"},
-                {"name": "technical", "doc_count": 25, "last_updated": "2026-07-03"},
-                {"name": "general", "doc_count": 15, "last_updated": "2026-07-03"}
-            ]
-        }
+        try:
+            # In this implementation, we use a single collection but can simulate
+            # multiple collections via metadata filtering
+            # For now, return the main collection info
 
-        return [TextContent(
-            type="text",
-            text=json.dumps(result, indent=2)
-        )]
+            stats = self.vector_store.get_collection_stats()
+
+            collections = [
+                {
+                    "name": self.config.milvus.collection_name,
+                    "doc_count": stats.get("row_count", 0) if stats else 0,
+                    "description": "Main RAG knowledge base",
+                    "last_updated": "2026-07-03"  # Would track this in production
+                }
+            ]
+
+            result = {
+                "status": "success",
+                "total": len(collections),
+                "collections": collections
+            }
+
+        except Exception as e:
+            result = {
+                "status": "error",
+                "message": f"Failed to list collections: {str(e)}",
+                "total": 0,
+                "collections": []
+            }
+
+        return [TextContent(type="text", text=json.dumps(result, indent=2))]
 
     async def _handle_get_document_summary(self, args: Dict[str, Any]) -> List[TextContent]:
         """Handle get document summary.
@@ -303,22 +523,58 @@ class MCPServer:
         """
         doc_id = args.get("doc_id")
 
-        # TODO: Implement actual summary retrieval from metadata
-        result = {
-            "doc_id": doc_id,
-            "title": "Document Title",
-            "summary": "This document contains information about...",
-            "chunks": 10,
-            "created_at": "2026-07-03T10:00:00",
-            "file_path": f"/path/to/{doc_id}.pdf",
-            "metadata": {
-                "pages": 5,
-                "author": "Unknown",
-                "language": "zh"
-            }
-        }
+        try:
+            # Query vector store for chunks belonging to this document
+            # Use metadata filtering to get chunks with matching doc_id
+            query_results = self.vector_store.query(
+                collection_name=self.config.milvus.collection_name,
+                data=[[0.0] * self.config.milvus.dense_dim],  # Dummy query
+                limit=1000,  # Get many chunks to find all from this doc
+                output_fields=["id", "doc_id", "text", "metadata"],
+                filter=f'doc_id == "{doc_id}"'
+            )
 
-        return [TextContent(
-            type="text",
-            text=json.dumps(result, indent=2)
-        )]
+            if not query_results or len(query_results) == 0 or len(query_results[0]) == 0:
+                result = {
+                    "status": "error",
+                    "message": f"Document not found: {doc_id}",
+                    "doc_id": doc_id
+                }
+                return [TextContent(type="text", text=json.dumps(result, indent=2))]
+
+            # Extract document information from chunks
+            chunks = query_results[0]
+            total_chunks = len(chunks)
+            first_chunk = chunks[0].get("entity", {})
+            metadata = first_chunk.get("metadata", {})
+
+            # Aggregate text from first few chunks for preview
+            preview_text = ""
+            for i, chunk in enumerate(chunks[:3]):
+                chunk_text = chunk.get("entity", {}).get("text", "")
+                preview_text += chunk_text + "\n\n"
+                if len(preview_text) > 1000:
+                    break
+
+            result = {
+                "status": "success",
+                "doc_id": doc_id,
+                "title": metadata.get("title", doc_id),
+                "chunks": total_chunks,
+                "file_path": metadata.get("file_path", "Unknown"),
+                "preview": preview_text[:1000].strip(),
+                "metadata": {
+                    "pages": metadata.get("pages"),
+                    "file_type": metadata.get("file_type", "pdf"),
+                    "created_at": metadata.get("created_at", "Unknown")
+                }
+            }
+
+        except Exception as e:
+            result = {
+                "status": "error",
+                "message": f"Failed to get document summary: {str(e)}",
+                "doc_id": doc_id
+            }
+
+        return [TextContent(type="text", text=json.dumps(result, indent=2))]
