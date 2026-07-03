@@ -60,9 +60,24 @@ if uploaded_file is not None:
             sparse_encoder_path = Path("data/db/bm25_encoder.pkl")
             if sparse_encoder_path.exists():
                 sparse_encoder = BM25SparseEncoder.load(sparse_encoder_path)
+                st.info("✓ 使用已有的 BM25 编码器")
             else:
                 sparse_encoder = BM25SparseEncoder()
                 sparse_encoder_path.parent.mkdir(parents=True, exist_ok=True)
+                st.info("→ 将在摄取后训练 BM25 编码器")
+
+            # First pass: Load and split to train BM25 if needed
+            if not sparse_encoder.vocab:
+                with st.spinner("准备训练 BM25 编码器..."):
+                    # Load and split document to get text corpus
+                    loader = PDFLoader()
+                    document = loader.load(temp_path)
+                    splitter = component_loader.get_splitter()
+                    text_chunks = splitter.split(document.text)
+
+                    # Train BM25 on the corpus
+                    sparse_encoder.fit(text_chunks)
+                    st.success(f"✓ BM25 编码器已训练（词汇量: {len(sparse_encoder.vocab)}）")
 
             # Create pipeline
             pipeline = IngestionPipeline(

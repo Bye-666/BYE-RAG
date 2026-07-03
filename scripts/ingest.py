@@ -167,11 +167,26 @@ Examples:
             print(f"Loading BM25 encoder from {sparse_encoder_path}")
             sparse_encoder = BM25SparseEncoder.load(sparse_encoder_path)
         else:
-            print("BM25 encoder not found, will need training")
-            print("Note: First ingestion will train BM25 on collected texts")
+            print("BM25 encoder not found, training on documents...")
             sparse_encoder = BM25SparseEncoder()
-            # TODO: Train on collected texts before processing
-        
+            sparse_encoder_path.parent.mkdir(parents=True, exist_ok=True)
+
+            # Collect all text chunks from files for training
+            all_texts = []
+            for file_path in files:
+                try:
+                    doc = loader.load(file_path)
+                    chunks = splitter.split(doc.text)
+                    all_texts.extend(chunks)
+                except Exception as e:
+                    print(f"Warning: Could not load {file_path} for BM25 training: {e}")
+
+            if all_texts:
+                sparse_encoder.fit(all_texts)
+                print(f"✓ BM25 encoder trained on {len(all_texts)} text chunks")
+            else:
+                print("Warning: No texts available for BM25 training")
+
         # Batch processor and upserter
         batch_processor = BatchProcessor(dense_encoder, sparse_encoder)
         vector_upserter = VectorUpserter(vector_store)
@@ -193,9 +208,14 @@ Examples:
     
     # Process files
     print("Starting ingestion...\n")
-    
+
     result = pipeline.ingest_files(files, progress_callback=print_progress)
-    
+
+    # Save BM25 encoder after successful ingestion
+    if result['successful'] > 0:
+        sparse_encoder.save(sparse_encoder_path)
+        print(f"\n✓ BM25 encoder saved to {sparse_encoder_path}")
+
     # Print summary
     print("\n" + "="*60)
     print("Ingestion Summary")

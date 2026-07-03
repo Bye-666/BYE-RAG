@@ -244,6 +244,13 @@ class MCPServer:
                 }
                 return [TextContent(type="text", text=json.dumps(result, indent=2))]
 
+            # Train BM25 encoder if not already trained
+            if not self.sparse_encoder.vocab:
+                # Load and split document to train BM25
+                document = self.pdf_loader.load(path)
+                text_chunks = self.splitter.split(document.text)
+                self.sparse_encoder.fit(text_chunks)
+
             # Ingest document
             ingest_result = self.ingestion_pipeline.ingest_file(file_path)
 
