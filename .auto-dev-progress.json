@@ -1,810 +1,241 @@
 {
   "project": "RAG-MCP-SERVER",
-  "version": "1.0",
-  "last_updated": "2026-07-03",
+  "version": "2.0",
+  "audit_date": "2026-07-03",
+  "note": "此为真实审计后的进度文件，对比 TECH_SPEC.md 要求生成",
   "total_tasks": 68,
-  "completed_count": 68,
-  "current_phase": "C",
-  "current_task": null,
-  "completed_tasks": [
-    {
-      "id": "A1",
-      "name": "初始化目录树",
-      "phase": "A",
-      "completed_at": "2026-07-03",
-      "files_created": [
-        "src/__init__.py",
-        "config/settings.yaml",
-        "data/documents/",
-        "data/images/",
-        "data/db/",
-        "logs/"
-      ],
-      "verification_status": "passed"
-    },
-    {
-      "id": "A2",
-      "name": "pytest 测试框架",
-      "phase": "A",
-      "completed_at": "2026-07-03",
-      "files_created": [
-        "pytest.ini",
-        "tests/__init__.py",
-        "tests/test_framework.py",
-        "tests/unit/__init__.py",
-        "tests/integration/__init__.py",
-        "tests/e2e/__init__.py"
-      ],
-      "verification_status": "passed",
-      "tests_passed": "3/3"
-    },
-    {
-      "id": "A3",
-      "name": "配置加载 Settings",
-      "phase": "A",
-      "completed_at": "2026-07-03",
-      "files_created": [
-        "src/config/__init__.py",
-        "src/config/settings.py",
-        "tests/unit/config/__init__.py",
-        "tests/unit/config/test_settings.py"
-      ],
-      "verification_status": "passed",
-      "tests_passed": "10/10"
-    },
-    {
-      "id": "B1",
-      "name": "BaseLLM 抽象接口",
-      "phase": "B",
-      "completed_at": "2026-07-03",
-      "files_created": [
-        "src/libs/__init__.py",
-        "src/libs/llm/__init__.py",
-        "src/libs/llm/base.py"
-      ],
-      "verification_status": "passed",
-      "notes": "使用 ABC 定义抽象接口，包含 generate() 和 generate_stream() 方法"
-    },
-    {
-      "id": "B2",
-      "name": "DashScopeLLM",
-      "phase": "B",
-      "completed_at": "2026-07-03",
-      "files_created": [
-        "src/libs/llm/dashscope_llm.py",
-        "tests/unit/libs/__init__.py",
-        "tests/unit/libs/llm/__init__.py",
-        "tests/unit/libs/llm/test_dashscope_llm.py"
-      ],
-      "verification_status": "passed",
-      "tests_passed": "11/11"
-    },
-    {
-      "id": "B3",
-      "name": "BaseEmbedding",
-      "phase": "B",
-      "completed_at": "2026-07-03",
-      "files_created": [
-        "src/libs/embedding/__init__.py",
-        "src/libs/embedding/base.py"
-      ],
-      "verification_status": "passed",
-      "notes": "使用 ABC 定义抽象接口，包含 encode() 和 encode_batch() 方法，定义 dimension 属性"
-    },
-    {
-      "id": "B4",
-      "name": "DashScopeEmbedding",
-      "phase": "B",
-      "completed_at": "2026-07-03",
-      "files_created": [
-        "src/libs/embedding/dashscope_embedding.py",
-        "tests/unit/libs/embedding/__init__.py",
-        "tests/unit/libs/embedding/test_dashscope_embedding.py"
-      ],
-      "verification_status": "passed",
-      "tests_passed": "12/12"
-    },
-    {
-      "id": "B5",
-      "name": "BaseVisionLLM",
-      "phase": "B",
-      "completed_at": "2026-07-03",
-      "files_created": [
-        "src/libs/vision_llm/__init__.py",
-        "src/libs/vision_llm/base.py"
-      ],
-      "verification_status": "passed",
-      "notes": "使用 ABC 定义抽象接口，包含 analyze_image() 方法"
-    },
-    {
-      "id": "B6",
-      "name": "DashScopeVision",
-      "phase": "B",
-      "completed_at": "2026-07-03",
-      "files_created": [
-        "src/libs/vision_llm/dashscope_vision.py",
-        "tests/unit/libs/vision_llm/__init__.py",
-        "tests/unit/libs/vision_llm/test_dashscope_vision.py"
-      ],
-      "verification_status": "passed",
-      "tests_passed": "12/12"
-    },
-    {
-      "id": "B7",
-      "name": "BaseSplitter",
-      "phase": "B",
-      "completed_at": "2026-07-03",
-      "files_created": [
-        "src/libs/splitter/__init__.py",
-        "src/libs/splitter/base.py"
-      ],
-      "verification_status": "passed",
-      "notes": "使用 ABC 定义抽象接口，包含 split() 方法"
-    },
-    {
-      "id": "B8",
-      "name": "RecursiveSplitter",
-      "phase": "B",
-      "completed_at": "2026-07-03",
-      "files_created": [
-        "src/libs/splitter/recursive_splitter.py",
-        "tests/unit/libs/splitter/__init__.py",
-        "tests/unit/libs/splitter/test_recursive_splitter.py"
-      ],
-      "verification_status": "passed",
-      "tests_passed": "14/14"
-    },
-    {
-      "id": "B9",
-      "name": "BaseVectorStore",
-      "phase": "B",
-      "completed_at": "2026-07-03",
-      "files_created": [
-        "src/libs/vector_store/__init__.py",
-        "src/libs/vector_store/base.py"
-      ],
-      "verification_status": "passed",
-      "notes": "使用 ABC 定义抽象接口，包含 upsert/search_dense/search_sparse/get_by_ids/delete/count 方法"
-    },
-    {
-      "id": "B10",
-      "name": "MilvusStore",
-      "phase": "B",
-      "completed_at": "2026-07-03",
-      "files_created": [
-        "src/libs/vector_store/milvus_store.py",
-        "tests/unit/libs/vector_store/__init__.py",
-        "tests/unit/libs/vector_store/test_milvus_store.py"
-      ],
-      "verification_status": "passed",
-      "tests_passed": "5/5",
-      "notes": "核心任务：基于 Milvus Lite，支持双向量混合检索"
-    },
-    {
-      "id": "B11",
-      "name": "BaseReranker",
-      "phase": "B",
-      "completed_at": "2026-07-03",
-      "files_created": [
-        "src/libs/reranker/__init__.py",
-        "src/libs/reranker/base.py"
-      ],
-      "verification_status": "passed"
-    },
-    {
-      "id": "B12",
-      "name": "CrossEncoderReranker",
-      "phase": "B",
-      "completed_at": "2026-07-03",
-      "files_created": [
-        "src/libs/reranker/cross_encoder.py"
-      ],
-      "verification_status": "passed"
-    },
-    {
-      "id": "B13",
-      "name": "BaseEvaluator",
-      "phase": "B",
-      "completed_at": "2026-07-03",
-      "files_created": [
-        "src/libs/evaluator/__init__.py",
-        "src/libs/evaluator/base.py"
-      ],
-      "verification_status": "passed"
-    },
-    {
-      "id": "B14",
-      "name": "Factory 模式",
-      "phase": "B",
-      "completed_at": "2026-07-03",
-      "files_created": [
-        "src/libs/factory.py"
-      ],
-      "verification_status": "passed"
-    },
-    {
-      "id": "B15",
-      "name": "配置驱动实例化",
-      "phase": "B",
-      "completed_at": "2026-07-03",
-      "files_created": [
-        "src/libs/loader.py"
-      ],
-      "verification_status": "passed"
-    },
-    {
-      "id": "B16",
-      "name": "Libs 集成测试",
-      "phase": "B",
-      "completed_at": "2026-07-03",
-      "files_created": [
-        "tests/integration/__init__.py",
-        "tests/integration/libs/__init__.py",
-        "tests/integration/libs/test_libs_integration.py"
-      ],
-      "verification_status": "passed",
-      "tests_passed": "6/6"
-    },
-    {
-      "id": "C1",
-      "name": "核心数据类型定义",
-      "phase": "C",
-      "completed_at": "2026-07-03",
-      "files_created": [
-        "src/ingestion/__init__.py",
-        "src/ingestion/types.py"
-      ],
-      "verification_status": "passed"
-    },
-    {
-      "id": "C2",
-      "name": "FileIntegrityChecker",
-      "phase": "C",
-      "completed_at": "2026-07-03",
-      "files_created": [
-        "src/ingestion/integrity_checker.py"
-      ],
-      "verification_status": "passed"
-    },
-    {
-      "id": "C3",
-      "name": "BaseLoader",
-      "phase": "C",
-      "completed_at": "2026-07-03",
-      "files_created": [
-        "src/ingestion/loaders/base.py",
-        "src/ingestion/loaders/__init__.py",
-        "tests/unit/ingestion/loaders/__init__.py",
-        "tests/unit/ingestion/loaders/test_base_loader.py"
-      ],
-      "verification_status": "passed",
-      "tests_passed": "7/7",
-      "notes": "Abstract base class with load() and load_batch() methods"
-    },
-    {
-      "id": "C4",
-      "name": "PDFLoader",
-      "phase": "C",
-      "completed_at": "2026-07-03",
-      "files_created": [
-        "src/ingestion/loaders/pdf_loader.py",
-        "tests/unit/ingestion/loaders/test_pdf_loader.py"
-      ],
-      "verification_status": "passed",
-      "tests_passed": "9/9",
-      "notes": "PyMuPDF-based PDF loader with optional dependency handling"
-    },
-    {
-      "id": "C5",
-      "name": "ChunkRefiner",
-      "phase": "C",
-      "completed_at": "2026-07-03",
-      "files_created": [
-        "src/ingestion/transformers/__init__.py",
-        "src/ingestion/transformers/chunk_refiner.py",
-        "tests/unit/ingestion/transformers/__init__.py",
-        "tests/unit/ingestion/transformers/test_chunk_refiner.py"
-      ],
-      "verification_status": "passed",
-      "tests_passed": "13/13",
-      "notes": "LLM-based chunk refinement with retry logic"
-    },
-    {
-      "id": "C6",
-      "name": "MetadataEnricher",
-      "phase": "C",
-      "completed_at": "2026-07-03",
-      "files_created": [
-        "src/ingestion/transformers/metadata_enricher.py",
-        "tests/unit/ingestion/transformers/test_metadata_enricher.py"
-      ],
-      "verification_status": "passed",
-      "tests_passed": "15/15",
-      "notes": "LLM-based metadata extraction with JSON parsing"
-    },
-    {
-      "id": "C7",
-      "name": "ImageCaptioner",
-      "phase": "C",
-      "completed_at": "2026-07-03",
-      "files_created": [
-        "src/ingestion/transformers/image_captioner.py",
-        "tests/unit/ingestion/transformers/test_image_captioner.py"
-      ],
-      "verification_status": "passed",
-      "tests_passed": "16/16",
-      "notes": "Vision LLM-based image captioning with batch support"
-    },
-    {
-      "id": "C8",
-      "name": "DenseEncoder",
-      "phase": "C",
-      "completed_at": "2026-07-03",
-      "files_created": [
-        "src/ingestion/embedders/__init__.py",
-        "src/ingestion/embedders/dense_encoder.py",
-        "tests/unit/ingestion/embedders/__init__.py",
-        "tests/unit/ingestion/embedders/test_dense_encoder.py"
-      ],
-      "verification_status": "passed",
-      "tests_passed": "15/15",
-      "notes": "Wrapper for embedding model with validation"
-    },
-    {
-      "id": "C9",
-      "name": "SparseEncoder (BM25)",
-      "phase": "C",
-      "completed_at": "2026-07-03",
-      "files_created": [
-        "src/ingestion/embedders/sparse_encoder.py",
-        "tests/unit/ingestion/embedders/test_sparse_encoder.py"
-      ],
-      "verification_status": "passed",
-      "tests_passed": "19/19",
-      "notes": "BM25 sparse vector encoder with fit/encode/save/load, based on TECH_SPEC reference"
-    },
-    {
-      "id": "C10",
-      "name": "BatchProcessor",
-      "phase": "C",
-      "completed_at": "2026-07-03",
-      "files_created": [
-        "src/ingestion/batch_processor.py",
-        "tests/unit/ingestion/test_batch_processor.py"
-      ],
-      "verification_status": "passed",
-      "tests_passed": "10/10",
-      "notes": "Batch processor for dual-vector generation (dense + sparse)"
-    },
-    {
-      "id": "C11",
-      "name": "VectorUpserter",
-      "phase": "C",
-      "completed_at": "2026-07-03",
-      "files_created": [
-        "src/ingestion/storage/__init__.py",
-        "src/ingestion/storage/vector_upserter.py",
-        "tests/unit/ingestion/storage/__init__.py",
-        "tests/unit/ingestion/storage/test_vector_upserter.py"
-      ],
-      "verification_status": "passed",
-      "tests_passed": "9/9",
-      "notes": "Batch vector insertion with fallback to individual inserts"
-    },
-    {
-      "id": "C12",
-      "name": "ImageStorage",
-      "phase": "C",
-      "completed_at": "2026-07-03",
-      "files_created": [
-        "src/ingestion/storage/image_storage.py",
-        "tests/unit/ingestion/storage/test_image_storage.py"
-      ],
-      "verification_status": "passed",
-      "tests_passed": "16/16",
-      "notes": "SQLite-based image indexing with CRUD operations"
-    },
-    {
-      "id": "C13",
-      "name": "Pipeline 编排",
-      "phase": "C",
-      "completed_at": "2026-07-03",
-      "files_created": [
-        "src/ingestion/pipeline.py",
-        "tests/unit/ingestion/test_pipeline.py"
-      ],
-      "verification_status": "passed",
-      "tests_passed": "14/14",
-      "notes": "Complete ingestion orchestration: load → split → process → upsert"
-    },
-    {
-      "id": "C14",
-      "name": "ingest.py 脚本",
-      "phase": "C",
-      "completed_at": "2026-07-03",
-      "files_created": [
-        "scripts/ingest.py"
-      ],
-      "verification_status": "passed",
-      "notes": "CLI script for document ingestion with progress display"
-    },
-    {
-      "id": "C15",
-      "name": "Ingestion E2E 测试",
-      "phase": "C",
-      "completed_at": "2026-07-03",
-      "files_created": [
-        "tests/integration/__init__.py",
-        "tests/integration/test_ingestion_e2e.py"
-      ],
-      "verification_status": "passed",
-      "tests_passed": "8/8",
-      "notes": "End-to-end integration test for complete ingestion pipeline"
-    },
-    {
-      "id": "C15",
-      "name": "Ingestion E2E 测试",
-      "phase": "C",
-      "completed_at": "2026-07-03",
-      "files_created": [
-        "tests/integration/__init__.py",
-        "tests/integration/test_ingestion_e2e.py"
-      ],
-      "verification_status": "passed",
-      "tests_passed": "8/8",
-      "notes": "End-to-end integration test for complete ingestion pipeline"
-    },
-    {
-      "id": "D1",
-      "name": "QueryProcessor",
-      "phase": "D",
-      "completed_at": "2026-07-03",
-      "files_created": [
-        "src/retrieval/__init__.py",
-        "src/retrieval/query_processor.py",
-        "tests/unit/retrieval/__init__.py",
-        "tests/unit/retrieval/test_query_processor.py"
-      ],
-      "verification_status": "passed",
-      "tests_passed": "16/16",
-      "notes": "Query processing with rewriting, expansion, and dual-vector generation"
-    },
-    {
-      "id": "D2",
-      "name": "DenseRetriever",
-      "phase": "D",
-      "completed_at": "2026-07-03",
-      "verification_status": "passed"
-    },
-    {
-      "id": "D3",
-      "name": "SparseRetriever",
-      "phase": "D",
-      "completed_at": "2026-07-03",
-      "verification_status": "passed"
-    },
-    {
-      "id": "D4",
-      "name": "RRF Fusion",
-      "phase": "D",
-      "completed_at": "2026-07-03",
-      "verification_status": "passed"
-    },
-    {
-      "id": "D5",
-      "name": "HybridSearch",
-      "phase": "D",
-      "completed_at": "2026-07-03",
-      "verification_status": "passed"
-    },
-    {
-      "id": "D6",
-      "name": "RerankerModule",
-      "phase": "D",
-      "completed_at": "2026-07-03",
-      "verification_status": "passed"
-    },
-    {
-      "id": "D7",
-      "name": "query.py 脚本",
-      "phase": "D",
-      "completed_at": "2026-07-03",
-      "verification_status": "passed"
-    },
-    {
-      "id": "E1",
-      "phase": "E",
-      "name": "MCP Server"
-    },
-    {
-      "id": "F1",
-      "phase": "F",
-      "name": "Trace System"
-    },
-    {
-      "id": "G1",
-      "phase": "G",
-      "name": "Dashboard"
-    },
-    {
-      "id": "H1",
-      "phase": "H",
-      "name": "Evaluation"
-    },
-    {
-      "id": "I1",
-      "phase": "I",
-      "name": "System E2E Tests"
-    },
-    {
-      "id": "E3",
-      "name": "query_knowledge_hub 工具",
-      "phase": "E",
-      "notes": "已集成到 server.py"
-    },
-    {
-      "id": "E4",
-      "name": "list_collections 工具",
-      "phase": "E",
-      "notes": "已集成到 server.py"
-    },
-    {
-      "id": "E5",
-      "name": "get_document_summary 工具",
-      "phase": "E",
-      "notes": "已集成到 server.py"
-    },
-    {
-      "id": "E6",
-      "name": "MCP Server E2E 测试",
-      "phase": "E",
-      "notes": "基础测试已覆盖"
-    },
-    {
-      "id": "F2",
-      "name": "结构化 Logger",
-      "phase": "F",
-      "notes": "基于 Python logging"
-    },
-    {
-      "id": "F3",
-      "name": "Ingestion 打点",
-      "phase": "F",
-      "notes": "集成到 pipeline"
-    },
-    {
-      "id": "F4",
-      "name": "Query 打点",
-      "phase": "F",
-      "notes": "集成到 query processor"
-    },
-    {
-      "id": "F5",
-      "name": "Trace 持久化",
-      "phase": "F",
-      "notes": "已实现 export_json"
-    },
-    {
-      "id": "G2",
-      "name": "数据浏览器",
-      "phase": "G",
-      "notes": "Web UI 已实现"
-    },
-    {
-      "id": "G3",
-      "name": "Ingestion 管理",
-      "phase": "G",
-      "notes": "Dashboard 已集成"
-    },
-    {
-      "id": "G4",
-      "name": "Ingestion 追踪页面",
-      "phase": "G",
-      "notes": "Dashboard 查询表"
-    },
-    {
-      "id": "G5",
-      "name": "Query 追踪页面",
-      "phase": "G",
-      "notes": "Dashboard 摄取表"
-    },
-    {
-      "id": "G6",
-      "name": "Dashboard 启动脚本",
-      "phase": "G",
-      "notes": "dashboard_server.py"
-    },
-    {
-      "id": "H2",
-      "name": "CompositeEvaluator",
-      "phase": "H",
-      "notes": "组合多个评估器"
-    },
-    {
-      "id": "H3",
-      "name": "Golden Test Set",
-      "phase": "H",
-      "notes": "测试数据集"
-    },
-    {
-      "id": "H4",
-      "name": "评估面板",
-      "phase": "H",
-      "notes": "集成到 Dashboard"
-    },
-    {
-      "id": "H5",
-      "name": "evaluate.py 脚本",
-      "phase": "H",
-      "notes": "评估脚本"
-    },
-    {
-      "id": "I2",
-      "name": "Dashboard 冒烟测试",
-      "phase": "I",
-      "notes": "基础测试已覆盖"
-    },
-    {
-      "id": "I3",
-      "name": "完善 README",
-      "phase": "I",
-      "notes": "文档完善"
-    },
-    {
-      "id": "I4",
-      "name": "接口契约测试",
-      "phase": "I",
-      "notes": "集成测试已覆盖"
-    },
-    {
-      "id": "I5",
-      "name": "全链路 E2E",
-      "phase": "I",
-      "notes": "test_system_e2e.py"
-    }
-  ],
+  "claimed_completed": 68,
+  "actual_completed": 40,
+  "actual_completion_rate": "59%",
+
   "phase_summary": {
     "A": {
       "name": "工程骨架与测试基座",
+      "total_tasks": 3,
+      "completed_tasks": 3,
       "status": "completed",
-      "completed_tasks": [
-        "A1",
-        "A2",
-        "A3"
-      ],
-      "total_tasks": 3
+      "completion": 100,
+      "issues": []
     },
     "B": {
       "name": "Libs 可插拔层",
-      "status": "completed",
-      "completed_tasks": [
-        "B1",
-        "B2",
-        "B3",
-        "B4",
-        "B5",
-        "B6",
-        "B7",
-        "B8",
-        "B9",
-        "B10",
-        "B11",
-        "B12",
-        "B13",
-        "B14",
-        "B15",
-        "B16"
-      ],
-      "total_tasks": 16
+      "total_tasks": 16,
+      "completed_tasks": 14,
+      "status": "mostly_completed",
+      "completion": 85,
+      "issues": [
+        "部分 Factory 逻辑未完善",
+        "Evaluator 抽象接口未实现 Ragas 集成"
+      ]
     },
     "C": {
       "name": "Ingestion Pipeline MVP",
-      "status": "completed",
-      "completed_tasks": [
-        "C1",
-        "C2",
-        "C3",
-        "C4",
-        "C5",
-        "C6",
-        "C7",
-        "C8",
-        "C9",
-        "C10",
-        "C11",
-        "C12",
-        "C13",
-        "C14",
-        "C15",
-        "C15"
-      ],
-      "total_tasks": 15
+      "total_tasks": 15,
+      "completed_tasks": 11,
+      "status": "partial",
+      "completion": 70,
+      "issues": [
+        "Transform 层部分实现为占位符（需验证 LLM 调用）",
+        "ImageStorage 实际功能未验证",
+        "文件完整性检查未集成到主 Pipeline"
+      ]
     },
     "D": {
       "name": "Retrieval Pipeline",
-      "status": "completed",
-      "completed_tasks": [
-        "D1",
-        "D2",
-        "D3",
-        "D4",
-        "D5",
-        "D6",
-        "D7"
-      ],
-      "total_tasks": 7
+      "total_tasks": 7,
+      "completed_tasks": 5,
+      "status": "partial",
+      "completion": 75,
+      "issues": [
+        "Reranker 实际调用未验证",
+        "Metadata Filtering 实现待确认"
+      ]
     },
     "E": {
-      "name": "MCP Server",
-      "status": "completed",
-      "completed_tasks": [
-        "E1",
-        "E2",
-        "E3",
-        "E4",
-        "E5",
-        "E6"
-      ],
-      "total_tasks": 1
+      "name": "MCP Server 层",
+      "total_tasks": 6,
+      "completed_tasks": 2,
+      "status": "placeholder",
+      "completion": 30,
+      "critical_issues": [
+        "🚨 所有工具函数为 TODO 占位符 - 无实际功能",
+        "🚨 无多模态返回（仅 TextContent，缺少 Image）",
+        "🚨 未集成实际 Query Engine 和 Retrieval",
+        "Protocol Handler 无能力协商逻辑",
+        "未连接 Vector Store"
+      ]
     },
     "F": {
-      "completed_tasks": [
-        "F1",
-        "F2",
-        "F3",
-        "F4",
-        "F5"
-      ],
-      "status": "completed",
-      "name": "Trace System",
-      "total_tasks": 1
+      "name": "Trace 基础设施",
+      "total_tasks": 5,
+      "completed_tasks": 2,
+      "status": "partial",
+      "completion": 40,
+      "critical_issues": [
+        "🚨 TraceContext 类不存在（TECH_SPEC 核心要求）",
+        "🚨 无 trace_type 字段（无法区分 Ingestion/Query）",
+        "无耗时统计（duration 计算缺失）",
+        "未在 Ingestion/Query 链路实际打点",
+        "Pipeline 进度回调未与 Trace 集成"
+      ]
     },
     "G": {
-      "completed_tasks": [
-        "G1",
-        "G2",
-        "G3",
-        "G4",
-        "G5",
-        "G6"
-      ],
-      "status": "completed",
-      "name": "Dashboard",
-      "total_tasks": 1
+      "name": "Dashboard 可视化平台",
+      "total_tasks": 6,
+      "completed_tasks": 0,
+      "status": "not_implemented",
+      "completion": 5,
+      "critical_issues": [
+        "🚨🚨 未使用 Streamlit（TECH_SPEC 明确要求）",
+        "🚨🚨 无 Web UI 界面（仅有内存数据收集类）",
+        "🚨 缺少所有 6 个页面（系统总览/数据浏览器/Ingestion管理/Ingestion追踪/Query追踪/评估面板）",
+        "无可视化组件（图表、瀑布图）",
+        "无 DocumentManager 实现",
+        "无 Trace 数据可视化"
+      ]
     },
     "H": {
-      "completed_tasks": [
-        "H1",
-        "H2",
-        "H3",
-        "H4",
-        "H5"
-      ],
-      "status": "completed",
-      "name": "Evaluation",
-      "total_tasks": 1
+      "name": "Evaluation 评估体系",
+      "total_tasks": 5,
+      "completed_tasks": 1,
+      "status": "placeholder",
+      "completion": 30,
+      "critical_issues": [
+        "🚨 RagasEvaluator 类不存在",
+        "🚨 未集成 ragas 库（项目中完全未使用）",
+        "无 EvalRunner 类",
+        "无 Golden Test Set（虽有 test_golden.json 但无加载逻辑）",
+        "无 Recall 回归测试"
+      ]
     },
     "I": {
-      "completed_tasks": [
-        "I1",
-        "I2",
-        "I3",
-        "I4",
-        "I5"
-      ],
-      "status": "completed",
-      "name": "Acceptance",
-      "total_tasks": 1
+      "name": "E2E 验收与文档",
+      "total_tasks": 5,
+      "completed_tasks": 2,
+      "status": "unverified",
+      "completion": 50,
+      "issues": [
+        "测试实际通过率未知（367个测试存在但未深度验证）",
+        "README 完整性未验证",
+        "MCP Client 调用模拟未确认"
+      ]
     }
   },
-  "next_tasks": [
+
+  "detailed_task_status": {
+    "A1": {"status": "completed", "completion": 100},
+    "A2": {"status": "completed", "completion": 100},
+    "A3": {"status": "completed", "completion": 100},
+
+    "B1-B16": {"status": "mostly_completed", "completion": 85, "note": "基础架构完成，部分集成待完善"},
+
+    "C1-C15": {"status": "partial", "completion": 70, "note": "结构完成，实际功能需验证"},
+
+    "D1-D7": {"status": "partial", "completion": 75, "note": "核心逻辑完成，边缘功能待验证"},
+
+    "E1": {"status": "partial", "completion": 30, "title": "MCP Server 入口", "issues": ["工具函数为占位符"]},
+    "E2": {"status": "not_implemented", "completion": 0, "title": "Protocol Handler", "issues": ["无能力协商逻辑"]},
+    "E3": {"status": "not_implemented", "completion": 0, "title": "query_knowledge_hub", "issues": ["TODO 占位符"]},
+    "E4": {"status": "not_implemented", "completion": 0, "title": "list_collections", "issues": ["TODO 占位符"]},
+    "E5": {"status": "not_implemented", "completion": 0, "title": "get_document_summary", "issues": ["TODO 占位符"]},
+    "E6": {"status": "not_implemented", "completion": 0, "title": "多模态返回组装", "issues": ["仅支持 TextContent"]},
+
+    "F1": {"status": "not_implemented", "completion": 0, "title": "TraceContext 增强", "issues": ["TraceContext 类不存在"]},
+    "F2": {"status": "completed", "completion": 100, "title": "结构化 Logger", "note": "支持 JSON Lines"},
+    "F3": {"status": "not_implemented", "completion": 0, "title": "Query 链路打点", "issues": ["未实际集成"]},
+    "F4": {"status": "not_implemented", "completion": 0, "title": "Ingestion 链路打点", "issues": ["未实际集成"]},
+    "F5": {"status": "partial", "completion": 50, "title": "Pipeline 进度回调", "note": "参数存在但未与 Trace 集成"},
+
+    "G1": {"status": "not_implemented", "completion": 0, "title": "Dashboard 基础架构", "issues": ["未使用 Streamlit"]},
+    "G2": {"status": "not_implemented", "completion": 0, "title": "数据浏览器", "issues": ["页面不存在"]},
+    "G3": {"status": "not_implemented", "completion": 0, "title": "Ingestion 管理", "issues": ["页面不存在"]},
+    "G4": {"status": "not_implemented", "completion": 0, "title": "Ingestion 追踪", "issues": ["页面不存在"]},
+    "G5": {"status": "not_implemented", "completion": 0, "title": "Query 追踪", "issues": ["页面不存在"]},
+    "G6": {"status": "not_implemented", "completion": 0, "title": "评估面板", "issues": ["页面不存在"]},
+
+    "H1": {"status": "not_implemented", "completion": 0, "title": "RagasEvaluator", "issues": ["类不存在，未集成 ragas"]},
+    "H2": {"status": "partial", "completion": 40, "title": "CompositeEvaluator", "note": "类存在但功能简单"},
+    "H3": {"status": "not_implemented", "completion": 0, "title": "EvalRunner + Golden Test Set", "issues": ["EvalRunner 不存在"]},
+    "H4": {"status": "not_implemented", "completion": 0, "title": "评估面板页面", "issues": ["依赖 G 阶段"]},
+    "H5": {"status": "not_implemented", "completion": 0, "title": "Recall 回归测试", "issues": ["测试不存在"]},
+
+    "I1-I5": {"status": "unverified", "completion": 50, "note": "结构存在但未深度验证"}
+  },
+
+  "critical_blockers": [
     {
-      "id": "E1",
-      "name": "MCP Server 实现",
-      "phase": "E",
-      "dependencies": []
+      "priority": "P0",
+      "blocker": "MCP Server 工具函数全部为占位符",
+      "impact": "核心功能完全不可用，无法提供实际服务",
+      "affected_phases": ["E"],
+      "fix_effort": "3-5天"
+    },
+    {
+      "priority": "P0",
+      "blocker": "Dashboard 未使用 Streamlit，无 Web UI",
+      "impact": "完全不符合 TECH_SPEC 要求，无可视化管理能力",
+      "affected_phases": ["G"],
+      "fix_effort": "5-7天（需重新实现）"
+    },
+    {
+      "priority": "P0",
+      "blocker": "未集成 Ragas 评估框架",
+      "impact": "无法执行高级 RAG 评估（Faithfulness、Answer Relevancy等）",
+      "affected_phases": ["H"],
+      "fix_effort": "2-3天"
+    },
+    {
+      "priority": "P1",
+      "blocker": "TraceContext 类缺失",
+      "impact": "追踪系统功能不完整，无法按 TECH_SPEC 增强",
+      "affected_phases": ["F"],
+      "fix_effort": "1-2天"
+    },
+    {
+      "priority": "P1",
+      "blocker": "无多模态返回支持",
+      "impact": "图片检索结果无法正确返回给 MCP Client",
+      "affected_phases": ["E"],
+      "fix_effort": "1天"
     }
   ],
-  "project_status": "COMPLETED",
-  "completion_date": "2026-07-03T15:11:40.652326"
+
+  "recommendations": {
+    "immediate_actions": [
+      "1. 实现 MCP Server 所有工具函数的实际逻辑（连接 Retrieval/Storage）",
+      "2. 使用 Streamlit 重建 Dashboard，实现 6 个页面",
+      "3. 集成 ragas 库，实现 RagasEvaluator 类"
+    ],
+    "high_priority": [
+      "4. 实现 TraceContext 类，完善追踪系统",
+      "5. 添加多模态返回支持（Image + Text）",
+      "6. 在 Ingestion/Query 链路实际打点"
+    ],
+    "medium_priority": [
+      "7. 完善 Transform 层实现（验证 LLM 调用）",
+      "8. 实现 EvalRunner 和 Golden Test Set 加载",
+      "9. 添加 Recall 回归测试"
+    ]
+  },
+
+  "estimated_remaining_work": {
+    "total_days": "15-20 工作日",
+    "breakdown": {
+      "Phase_E_fix": "3-5天",
+      "Phase_F_fix": "1-2天",
+      "Phase_G_rebuild": "5-7天",
+      "Phase_H_fix": "2-3天",
+      "Phase_I_verification": "2-3天",
+      "Integration_testing": "2天"
+    }
+  },
+
+  "conclusion": {
+    "claimed_status": "100% 完成 (68/68 任务)",
+    "actual_status": "59% 完成 (40/68 任务)",
+    "gap": "28 个任务未完成或为占位符实现",
+    "project_health": "黄色 - 基础架构良好，但关键功能缺失",
+    "production_ready": false,
+    "next_milestone": "完成 P0 Blockers 后可达到 MVP 状态"
+  }
 }
