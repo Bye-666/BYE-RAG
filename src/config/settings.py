@@ -123,6 +123,18 @@ class Settings:
         """重新加载配置文件"""
         self._load_config()
 
+    @classmethod
+    def from_yaml(cls, config_path: Optional[str] = None) -> "Settings":
+        """从 YAML 文件加载配置
+
+        Args:
+            config_path: 配置文件路径，默认为 config/settings.yaml
+
+        Returns:
+            Settings 实例
+        """
+        return cls(config_path)
+
 
 # 单例实例
 _settings_instance: Optional[Settings] = None
