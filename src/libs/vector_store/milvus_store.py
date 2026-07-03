@@ -186,6 +186,7 @@ class MilvusStore(BaseVectorStore):
 
             # 使用 Milvus Lite 的 API 创建集合
             from milvus_lite import FieldSchema, CollectionSchema, DataType
+            import time
 
             # 定义字段
             fields = [
@@ -207,22 +208,48 @@ class MilvusStore(BaseVectorStore):
                 schema=schema
             )
 
-            # 创建索引
-            collection.create_index(
-                field_name="dense_vector",
-                index_params={
-                    "index_type": "FLAT",
-                    "metric_type": "COSINE"
-                }
-            )
+            # 创建索引时添加重试逻辑（Windows 文件系统问题）
+            max_retries = 3
+            for attempt in range(max_retries):
+                try:
+                    collection.create_index(
+                        field_name="dense_vector",
+                        index_params={
+                            "index_type": "FLAT",
+                            "metric_type": "COSINE"
+                        }
+                    )
+                    break
+                except Exception as e:
+                    # 如果索引已存在，跳过
+                    if "already exists" in str(e):
+                        break
+                    if attempt < max_retries - 1:
+                        print(f"[WARNING] Index creation retry {attempt + 1}/{max_retries}: {e}")
+                        time.sleep(0.5)  # 等待文件系统同步
+                    else:
+                        print(f"[WARNING] Dense index creation failed after {max_retries} attempts, continuing...")
 
-            collection.create_index(
-                field_name="sparse_vector",
-                index_params={
-                    "index_type": "SPARSE_INVERTED_INDEX",
-                    "metric_type": "IP"
-                }
-            )
+            for attempt in range(max_retries):
+                try:
+                    collection.create_index(
+                        field_name="sparse_vector",
+                        index_params={
+                            "index_type": "SPARSE_INVERTED_INDEX",
+                            "metric_type": "IP"
+                        }
+                    )
+                    break
+                except Exception as e:
+                    # 如果索引已存在，跳过
+                    if "already exists" in str(e):
+                        break
+                    if attempt < max_retries - 1:
+                        print(f"[WARNING] Index creation retry {attempt + 1}/{max_retries}: {e}")
+                        time.sleep(0.5)
+                    else:
+                        print(f"[WARNING] Sparse index creation failed after {max_retries} attempts, continuing...")
+
         except Exception as e:
             print(f"Error creating collection in Milvus Lite: {e}")
             raise
@@ -302,6 +329,13 @@ class MilvusStore(BaseVectorStore):
             # Milvus Lite 模式
             try:
                 collection = self._lite_server.get_collection(self.collection_name)
+
+                # 确保 Collection 已加载（如果已加载会自动跳过）
+                try:
+                    collection.load()
+                except Exception:
+                    pass  # 已经加载，忽略错误
+
                 results = collection.search(
                     data=[query_vector],
                     anns_field="dense_vector",
@@ -551,34 +585,45 @@ class MilvusStore(BaseVectorStore):
         Returns:
             查询结果列表
         """
-        if output_fields is None:
-            output_fields = ["id", "text"]
-
         if self._lite_server is not None:
             # Milvus Lite 模式
             try:
                 collection = self._lite_server.get_collection(self.collection_name)
+
+                # 确保 Collection 已加载（如果已加载会自动跳过）
+                try:
+                    collection.load()
+                except Exception:
+                    pass  # 已经加载，忽略错误
+
                 # 如果没有过滤条件，使用简单查询
                 if not expr:
                     expr = "id != ''"  # 查询所有记录
 
-                results = collection.query(
-                    expr=expr,
-                    output_fields=output_fields,
-                    limit=limit
-                )
+                # Milvus Lite: 不传 output_fields 会返回所有字段（包括动态字段）
+                # 如果用户指定了 output_fields，则使用用户指定的
+                query_params = {
+                    "expr": expr,
+                    "limit": limit
+                }
+                if output_fields is not None:
+                    query_params["output_fields"] = output_fields
+
+                results = collection.query(**query_params)
 
                 return [
                     {
                         "id": r.get("id", ""),
                         "text": r.get("text", ""),
-                        "metadata": {k: v for k, v in r.items() if k not in ["id", "text"]}
+                        "metadata": {k: v for k, v in r.items() if k not in ["id", "text", "dense_vector", "sparse_vector"]}
                     }
                     for r in results
                 ]
             except Exception as e:
                 print(f"Query error in Milvus Lite: {e}")
-                return []
+                import traceback
+                traceback.print_exc()
+                raise  # 重新抛出异常而不是返回空列表
         else:
             # 标准 Milvus 模式
             results = self.client.query(

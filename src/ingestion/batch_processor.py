@@ -25,25 +25,29 @@ class BatchProcessor:
 
     def process(self, chunk: Chunk) -> ChunkRecord:
         """Process single chunk into ChunkRecord with dual vectors.
-        
+
         Args:
             chunk: Chunk to process
-            
+
         Returns:
             ChunkRecord with dense and sparse vectors
         """
         # Generate dense vector
         dense_vector = self.dense_encoder.encode(chunk.text)
-        
+
         # Generate sparse vector
         sparse_vector = self.sparse_encoder.encode(chunk.text)
-        
+
+        # 将 doc_id 添加到 metadata 中
+        metadata = chunk.metadata.copy()
+        metadata["doc_id"] = chunk.doc_id
+
         return ChunkRecord(
             id=chunk.id,
             text=chunk.text,
             dense_vector=dense_vector,
             sparse_vector=sparse_vector,
-            metadata=chunk.metadata
+            metadata=metadata
         )
 
     def process_batch(self, chunks: List[Chunk]) -> List[ChunkRecord]:
@@ -70,12 +74,16 @@ class BatchProcessor:
         # Combine into ChunkRecords
         records = []
         for chunk, dense_vec, sparse_vec in zip(chunks, dense_vectors, sparse_vectors):
+            # 将 doc_id 添加到 metadata 中
+            metadata = chunk.metadata.copy()
+            metadata["doc_id"] = chunk.doc_id
+
             record = ChunkRecord(
                 id=chunk.id,
                 text=chunk.text,
                 dense_vector=dense_vec,
                 sparse_vector=sparse_vec,
-                metadata=chunk.metadata
+                metadata=metadata
             )
             records.append(record)
         

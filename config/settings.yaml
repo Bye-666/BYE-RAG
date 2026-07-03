@@ -23,7 +23,7 @@ vector_store:
   type: milvus
   uri: "./data/db/milvus.db"
   collection_name: rag_knowledge_hub
-  dense_dim: 2048
+  dense_dim: 1024  # 改为 1024 以匹配 text-embedding-v4 默认维度
 
 # 文本分块配置
 splitter:

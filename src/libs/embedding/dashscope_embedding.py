@@ -48,6 +48,12 @@ class DashScopeEmbedding(BaseEmbedding):
                 "DashScope API Key 未设置。请通过参数传入或设置环境变量 DASHSCOPE_API_KEY"
             )
 
+        # 清除代理设置（避免代理连接问题）
+        os.environ.pop('HTTP_PROXY', None)
+        os.environ.pop('HTTPS_PROXY', None)
+        os.environ.pop('http_proxy', None)
+        os.environ.pop('https_proxy', None)
+
         # 延迟导入
         try:
             import dashscope

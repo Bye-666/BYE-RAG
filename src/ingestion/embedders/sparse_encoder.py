@@ -70,40 +70,38 @@ class BM25SparseEncoder:
             idf_value = math.log((self.doc_count - df + 0.5) / (df + 0.5) + 1)
             self.idf[term_id] = idf_value
 
-    def encode(self, text: str) -> Dict[str, List]:
+    def encode(self, text: str) -> Dict[int, float]:
         """Encode text into sparse vector.
-        
+
         Args:
             text: Text to encode
-            
+
         Returns:
-            Sparse vector in Milvus format: {"indices": [...], "values": [...]}
+            Sparse vector in Milvus Lite format: {term_id: score, ...}
         """
         if not self.vocab:
             raise RuntimeError("Encoder not fitted. Call fit() first.")
-        
+
         terms = self._tokenize(text)
         term_freq = Counter(terms)
         doc_len = len(terms)
-        
-        indices = []
-        values = []
-        
+
+        sparse_vector = {}
+
         for term, tf in term_freq.items():
             if term in self.vocab:
                 term_id = self.vocab[term]
                 idf_value = self.idf[term_id]
-                
+
                 # BM25 formula
                 numerator = tf * (self.k1 + 1)
                 denominator = tf + self.k1 * (1 - self.b + self.b * doc_len / self.avgdl)
                 score = idf_value * (numerator / denominator)
-                
-                indices.append(term_id)
-                values.append(score)
-        
-        # Return Milvus sparse vector format
-        return {"indices": indices, "values": values}
+
+                # Milvus Lite 格式：dict[int, float]
+                sparse_vector[int(term_id)] = float(score)
+
+        return sparse_vector
 
     def _tokenize(self, text: str) -> List[str]:
         """Tokenize text into terms.

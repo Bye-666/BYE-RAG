@@ -34,7 +34,7 @@ class VectorUpserter:
                 texts=[record.text],
                 dense_vectors=[record.dense_vector],
                 sparse_vectors=[record.sparse_vector],
-                metadatas=[record.metadata]
+                metadata=[record.metadata]
             )
             return True
         except Exception as e:
@@ -68,7 +68,7 @@ class VectorUpserter:
                 texts=texts,
                 dense_vectors=dense_vectors,
                 sparse_vectors=sparse_vectors,
-                metadatas=metadatas
+                metadata=metadatas
             )
             return len(records)
             
