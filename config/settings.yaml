@@ -1,25 +1,48 @@
 # RAG-MCP-SERVER 配置文件
-# 快速原型阶段 - 基础结构
 
 # LLM 配置
 llm:
-  provider: ""
-  model: ""
-  api_key: ""
+  provider: dashscope
+  model: qwen-max
+  api_key: "${DASHSCOPE_API_KEY}"
 
 # Embedding 配置
 embedding:
-  provider: ""
-  model: ""
-  api_key: ""
+  provider: dashscope
+  model: text-embedding-v4
+  api_key: "${DASHSCOPE_API_KEY}"
 
-# 向量数据库配置
+# Vision LLM 配置
+vision_llm:
+  provider: dashscope
+  model: qwen-vl-max
+  api_key: "${DASHSCOPE_API_KEY}"
+
+# 向量存储配置
 vector_store:
-  type: "milvus"
-  uri: "data/db/milvus.db"
-  collection_name: "rag_collection"
+  type: milvus
+  uri: "./data/db/milvus.db"
+  collection_name: rag_knowledge_hub
+  dense_dim: 2048
 
-# 日志配置
-logging:
-  level: "INFO"
-  trace_file: "logs/traces.jsonl"
+# 文本分块配置
+splitter:
+  chunk_size: 1000
+  chunk_overlap: 200
+
+# 检索配置
+retrieval:
+  sparse_backend: bm25
+  top_k: 20
+  dense_weight: 0.5
+  sparse_weight: 0.5
+
+# 重排序配置
+rerank:
+  backend: cross_encoder
+  model: cross-encoder/ms-marco-MiniLM-L-6-v2
+  top_k: 10
+
+# 评估配置
+evaluation:
+  enabled: false
