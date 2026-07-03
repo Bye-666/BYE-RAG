@@ -3,9 +3,9 @@
   "version": "1.0",
   "last_updated": "2026-07-03",
   "total_tasks": 68,
-  "completed_count": 6,
+  "completed_count": 7,
   "current_phase": "B",
-  "current_task": "B4",
+  "current_task": "B5",
   "completed_tasks": [
     {
       "id": "A1",
@@ -90,6 +90,19 @@
       ],
       "verification_status": "passed",
       "notes": "使用 ABC 定义抽象接口，包含 encode() 和 encode_batch() 方法，定义 dimension 属性"
+    },
+    {
+      "id": "B4",
+      "name": "DashScopeEmbedding",
+      "phase": "B",
+      "completed_at": "2026-07-03",
+      "files_created": [
+        "src/libs/embedding/dashscope_embedding.py",
+        "tests/unit/libs/embedding/__init__.py",
+        "tests/unit/libs/embedding/test_dashscope_embedding.py"
+      ],
+      "verification_status": "passed",
+      "tests_passed": "12/12"
     }
   ],
   "phase_summary": {
@@ -102,16 +115,16 @@
     "B": {
       "name": "Libs 可插拔层",
       "status": "in_progress",
-      "completed_tasks": ["B1", "B2", "B3"],
+      "completed_tasks": ["B1", "B2", "B3", "B4"],
       "total_tasks": 16
     }
   },
   "next_tasks": [
     {
-      "id": "B4",
-      "name": "DashScopeEmbedding",
+      "id": "B5",
+      "name": "BaseVisionLLM",
       "phase": "B",
-      "dependencies": ["B3"]
+      "dependencies": ["A3"]
     }
   ]
 }
