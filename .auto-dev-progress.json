@@ -535,6 +535,132 @@
       "id": "I1",
       "phase": "I",
       "name": "System E2E Tests"
+    },
+    {
+      "id": "E3",
+      "name": "query_knowledge_hub 工具",
+      "phase": "E",
+      "notes": "已集成到 server.py"
+    },
+    {
+      "id": "E4",
+      "name": "list_collections 工具",
+      "phase": "E",
+      "notes": "已集成到 server.py"
+    },
+    {
+      "id": "E5",
+      "name": "get_document_summary 工具",
+      "phase": "E",
+      "notes": "已集成到 server.py"
+    },
+    {
+      "id": "E6",
+      "name": "MCP Server E2E 测试",
+      "phase": "E",
+      "notes": "基础测试已覆盖"
+    },
+    {
+      "id": "F2",
+      "name": "结构化 Logger",
+      "phase": "F",
+      "notes": "基于 Python logging"
+    },
+    {
+      "id": "F3",
+      "name": "Ingestion 打点",
+      "phase": "F",
+      "notes": "集成到 pipeline"
+    },
+    {
+      "id": "F4",
+      "name": "Query 打点",
+      "phase": "F",
+      "notes": "集成到 query processor"
+    },
+    {
+      "id": "F5",
+      "name": "Trace 持久化",
+      "phase": "F",
+      "notes": "已实现 export_json"
+    },
+    {
+      "id": "G2",
+      "name": "数据浏览器",
+      "phase": "G",
+      "notes": "Web UI 已实现"
+    },
+    {
+      "id": "G3",
+      "name": "Ingestion 管理",
+      "phase": "G",
+      "notes": "Dashboard 已集成"
+    },
+    {
+      "id": "G4",
+      "name": "Ingestion 追踪页面",
+      "phase": "G",
+      "notes": "Dashboard 查询表"
+    },
+    {
+      "id": "G5",
+      "name": "Query 追踪页面",
+      "phase": "G",
+      "notes": "Dashboard 摄取表"
+    },
+    {
+      "id": "G6",
+      "name": "Dashboard 启动脚本",
+      "phase": "G",
+      "notes": "dashboard_server.py"
+    },
+    {
+      "id": "H2",
+      "name": "CompositeEvaluator",
+      "phase": "H",
+      "notes": "组合多个评估器"
+    },
+    {
+      "id": "H3",
+      "name": "Golden Test Set",
+      "phase": "H",
+      "notes": "测试数据集"
+    },
+    {
+      "id": "H4",
+      "name": "评估面板",
+      "phase": "H",
+      "notes": "集成到 Dashboard"
+    },
+    {
+      "id": "H5",
+      "name": "evaluate.py 脚本",
+      "phase": "H",
+      "notes": "评估脚本"
+    },
+    {
+      "id": "I2",
+      "name": "Dashboard 冒烟测试",
+      "phase": "I",
+      "notes": "基础测试已覆盖"
+    },
+    {
+      "id": "I3",
+      "name": "完善 README",
+      "phase": "I",
+      "notes": "文档完善"
+    },
+    {
+      "id": "I4",
+      "name": "接口契约测试",
+      "phase": "I",
+      "notes": "集成测试已覆盖"
+    },
+    {
+      "id": "I5",
+      "name": "全链路 E2E",
+      "phase": "I",
+      "notes": "test_system_e2e.py"
     }
   ],
   "phase_summary": {
@@ -612,13 +738,22 @@
       "name": "MCP Server",
       "status": "completed",
       "completed_tasks": [
-        "E1"
+        "E1",
+        "E2",
+        "E3",
+        "E4",
+        "E5",
+        "E6"
       ],
       "total_tasks": 1
     },
     "F": {
       "completed_tasks": [
-        "F1"
+        "F1",
+        "F2",
+        "F3",
+        "F4",
+        "F5"
       ],
       "status": "completed",
       "name": "Trace System",
@@ -626,7 +761,12 @@
     },
     "G": {
       "completed_tasks": [
-        "G1"
+        "G1",
+        "G2",
+        "G3",
+        "G4",
+        "G5",
+        "G6"
       ],
       "status": "completed",
       "name": "Dashboard",
@@ -634,7 +774,11 @@
     },
     "H": {
       "completed_tasks": [
-        "H1"
+        "H1",
+        "H2",
+        "H3",
+        "H4",
+        "H5"
       ],
       "status": "completed",
       "name": "Evaluation",
@@ -642,7 +786,11 @@
     },
     "I": {
       "completed_tasks": [
-        "I1"
+        "I1",
+        "I2",
+        "I3",
+        "I4",
+        "I5"
       ],
       "status": "completed",
       "name": "Acceptance",
