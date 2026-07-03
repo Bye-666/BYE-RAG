@@ -3,9 +3,9 @@
   "version": "1.0",
   "last_updated": "2026-07-03",
   "total_tasks": 68,
-  "completed_count": 13,
+  "completed_count": 14,
   "current_phase": "B",
-  "current_task": "B11",
+  "current_task": "B12",
   "completed_tasks": [
     {
       "id": "A1",
@@ -179,6 +179,17 @@
       "verification_status": "passed",
       "tests_passed": "5/5",
       "notes": "核心任务：基于 Milvus Lite，支持双向量混合检索"
+    },
+    {
+      "id": "B11",
+      "name": "BaseReranker",
+      "phase": "B",
+      "completed_at": "2026-07-03",
+      "files_created": [
+        "src/libs/reranker/__init__.py",
+        "src/libs/reranker/base.py"
+      ],
+      "verification_status": "passed"
     }
   ],
   "phase_summary": {
@@ -191,16 +202,16 @@
     "B": {
       "name": "Libs 可插拔层",
       "status": "in_progress",
-      "completed_tasks": ["B1", "B2", "B3", "B4", "B5", "B6", "B7", "B8", "B9", "B10"],
+      "completed_tasks": ["B1", "B2", "B3", "B4", "B5", "B6", "B7", "B8", "B9", "B10", "B11"],
       "total_tasks": 16
     }
   },
   "next_tasks": [
     {
-      "id": "B11",
-      "name": "BaseReranker",
+      "id": "B12",
+      "name": "CrossEncoderReranker",
       "phase": "B",
-      "dependencies": ["A3"]
+      "dependencies": ["B11"]
     }
   ]
 }
