@@ -3,9 +3,9 @@
   "version": "1.0",
   "last_updated": "2026-07-03",
   "total_tasks": 68,
-  "completed_count": 10,
+  "completed_count": 11,
   "current_phase": "B",
-  "current_task": "B8",
+  "current_task": "B9",
   "completed_tasks": [
     {
       "id": "A1",
@@ -140,6 +140,19 @@
       ],
       "verification_status": "passed",
       "notes": "使用 ABC 定义抽象接口，包含 split() 方法"
+    },
+    {
+      "id": "B8",
+      "name": "RecursiveSplitter",
+      "phase": "B",
+      "completed_at": "2026-07-03",
+      "files_created": [
+        "src/libs/splitter/recursive_splitter.py",
+        "tests/unit/libs/splitter/__init__.py",
+        "tests/unit/libs/splitter/test_recursive_splitter.py"
+      ],
+      "verification_status": "passed",
+      "tests_passed": "14/14"
     }
   ],
   "phase_summary": {
@@ -152,16 +165,16 @@
     "B": {
       "name": "Libs 可插拔层",
       "status": "in_progress",
-      "completed_tasks": ["B1", "B2", "B3", "B4", "B5", "B6", "B7"],
+      "completed_tasks": ["B1", "B2", "B3", "B4", "B5", "B6", "B7", "B8"],
       "total_tasks": 16
     }
   },
   "next_tasks": [
     {
-      "id": "B8",
-      "name": "RecursiveSplitter",
+      "id": "B9",
+      "name": "BaseVectorStore",
       "phase": "B",
-      "dependencies": ["B7"]
+      "dependencies": ["A3"]
     }
   ]
 }
