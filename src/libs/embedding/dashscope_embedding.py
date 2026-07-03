@@ -89,8 +89,29 @@ class DashScopeEmbedding(BaseEmbedding):
                 f"DashScope API 调用失败: {response.code} - {response.message}"
             )
 
-        # 提取向量
-        return response.output.embeddings[0].embedding
+        # 提取向量（response.output 是字典）
+        embeddings = response.output.get('embeddings', [])
+        if not embeddings:
+            raise Exception("DashScope API 返回空的 embeddings")
+
+        # 返回第一个 embedding（可能是对象或字典）
+        first_embedding = embeddings[0]
+        if isinstance(first_embedding, dict):
+            return first_embedding.get('embedding', [])
+        else:
+            return first_embedding.embedding
+
+    def embed(self, text: str, **kwargs: Any) -> List[float]:
+        """编码单个文本为向量（encode 的别名）
+
+        Args:
+            text: 输入文本
+            **kwargs: 其他编码参数
+
+        Returns:
+            向量（浮点数列表）
+        """
+        return self.encode(text, **kwargs)
 
     def encode_batch(
         self,
@@ -127,8 +148,19 @@ class DashScopeEmbedding(BaseEmbedding):
                 f"DashScope API 调用失败: {response.code} - {response.message}"
             )
 
-        # 提取向量列表
-        return [emb.embedding for emb in response.output.embeddings]
+        # 提取向量列表（response.output 是字典）
+        embeddings = response.output.get('embeddings', [])
+        if not embeddings:
+            raise Exception("DashScope API 返回空的 embeddings")
+
+        # 返回向量列表（可能是对象或字典）
+        result = []
+        for emb in embeddings:
+            if isinstance(emb, dict):
+                result.append(emb.get('embedding', []))
+            else:
+                result.append(emb.embedding)
+        return result
 
     @property
     def dimension(self) -> int:
