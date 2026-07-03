@@ -3,9 +3,9 @@
   "version": "1.0",
   "last_updated": "2026-07-03",
   "total_tasks": 68,
-  "completed_count": 18,
-  "current_phase": "B",
-  "current_task": "B16",
+  "completed_count": 19,
+  "current_phase": "C",
+  "current_task": "C1",
   "completed_tasks": [
     {
       "id": "A1",
@@ -231,6 +231,19 @@
         "src/libs/loader.py"
       ],
       "verification_status": "passed"
+    },
+    {
+      "id": "B16",
+      "name": "Libs 集成测试",
+      "phase": "B",
+      "completed_at": "2026-07-03",
+      "files_created": [
+        "tests/integration/__init__.py",
+        "tests/integration/libs/__init__.py",
+        "tests/integration/libs/test_libs_integration.py"
+      ],
+      "verification_status": "passed",
+      "tests_passed": "6/6"
     }
   ],
   "phase_summary": {
@@ -242,17 +255,23 @@
     },
     "B": {
       "name": "Libs 可插拔层",
-      "status": "in_progress",
-      "completed_tasks": ["B1", "B2", "B3", "B4", "B5", "B6", "B7", "B8", "B9", "B10", "B11", "B12", "B13", "B14", "B15"],
+      "status": "completed",
+      "completed_tasks": ["B1", "B2", "B3", "B4", "B5", "B6", "B7", "B8", "B9", "B10", "B11", "B12", "B13", "B14", "B15", "B16"],
       "total_tasks": 16
+    },
+    "C": {
+      "name": "Ingestion Pipeline MVP",
+      "status": "not_started",
+      "completed_tasks": [],
+      "total_tasks": 15
     }
   },
   "next_tasks": [
     {
-      "id": "B16",
-      "name": "Libs 集成测试",
-      "phase": "B",
-      "dependencies": ["B15"]
+      "id": "C1",
+      "name": "核心数据类型定义",
+      "phase": "C",
+      "dependencies": ["B16"]
     }
   ]
 }
