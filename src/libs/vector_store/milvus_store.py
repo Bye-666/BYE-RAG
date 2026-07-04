@@ -326,38 +326,46 @@ class MilvusStore(BaseVectorStore):
             检索结果列表
         """
         if self._lite_server is not None:
-            # Milvus Lite 模式
+            # Milvus Lite 模式 - 使用不同的 API
             try:
                 collection = self._lite_server.get_collection(self.collection_name)
 
-                # 确保 Collection 已加载（如果已加载会自动跳过）
+                # 确保 Collection 已加载
                 try:
                     collection.load()
                 except Exception:
                     pass  # 已经加载，忽略错误
 
+                # Milvus Lite 使用不同的参数
                 results = collection.search(
-                    data=[query_vector],
-                    anns_field="dense_vector",
-                    limit=top_k,
+                    query_vectors=[query_vector],
+                    top_k=top_k,
+                    metric_type="COSINE",
                     expr=filter_expr,
                     output_fields=["id", "text"],
-                    **kwargs
+                    anns_field="dense_vector"
                 )
 
                 # 格式化结果
                 formatted_results = []
                 for hit in results[0]:
+                    # Milvus Lite 返回 dict，文本可能在 entity 中
+                    text = hit.get("text")
+                    if text is None and "entity" in hit:
+                        text = hit["entity"].get("text")
+
                     formatted_results.append({
-                        "id": hit.entity.get("id"),
-                        "text": hit.entity.get("text"),
-                        "score": hit.distance,
-                        "metadata": {k: v for k, v in hit.entity.items() if k not in ["id", "text"]}
+                        "id": hit.get("id"),
+                        "text": text,
+                        "score": hit.get("distance"),
+                        "metadata": {k: v for k, v in hit.items() if k not in ["id", "text", "distance", "entity"]}
                     })
 
                 return formatted_results
             except Exception as e:
                 print(f"Search dense error in Milvus Lite: {e}")
+                import traceback
+                traceback.print_exc()
                 return []
         else:
             # 标准 Milvus 模式
@@ -402,31 +410,40 @@ class MilvusStore(BaseVectorStore):
             检索结果列表
         """
         if self._lite_server is not None:
-            # Milvus Lite 模式
+            # Milvus Lite 模式 - 使用不同的 API
             try:
                 collection = self._lite_server.get_collection(self.collection_name)
+
+                # Milvus Lite 稀疏向量搜索
                 results = collection.search(
-                    data=[query_vector],
-                    anns_field="sparse_vector",
-                    limit=top_k,
+                    query_vectors=[query_vector],
+                    top_k=top_k,
+                    metric_type="IP",
                     expr=filter_expr,
                     output_fields=["id", "text"],
-                    **kwargs
+                    anns_field="sparse_vector"
                 )
 
                 # 格式化结果
                 formatted_results = []
                 for hit in results[0]:
+                    # Milvus Lite 返回 dict，文本可能在 entity 中
+                    text = hit.get("text")
+                    if text is None and "entity" in hit:
+                        text = hit["entity"].get("text")
+
                     formatted_results.append({
-                        "id": hit.entity.get("id"),
-                        "text": hit.entity.get("text"),
-                        "score": hit.distance,
-                        "metadata": {k: v for k, v in hit.entity.items() if k not in ["id", "text"]}
+                        "id": hit.get("id"),
+                        "text": text,
+                        "score": hit.get("distance"),
+                        "metadata": {k: v for k, v in hit.items() if k not in ["id", "text", "distance", "entity"]}
                     })
 
                 return formatted_results
             except Exception as e:
                 print(f"Search sparse error in Milvus Lite: {e}")
+                import traceback
+                traceback.print_exc()
                 return []
         else:
             # 标准 Milvus 模式
