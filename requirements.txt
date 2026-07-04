@@ -11,6 +11,7 @@ pandas
 PyMuPDF>=1.23.0
 python-magic
 rank-bm25
+jieba
 
 # Evaluation (Optional but recommended)
 ragas

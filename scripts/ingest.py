@@ -183,7 +183,7 @@ Examples:
 
             if all_texts:
                 sparse_encoder.fit(all_texts)
-                print(f"✓ BM25 encoder trained on {len(all_texts)} text chunks")
+                print(f"[OK] BM25 encoder trained on {len(all_texts)} text chunks")
             else:
                 print("Warning: No texts available for BM25 training")
 
@@ -214,7 +214,7 @@ Examples:
     # Save BM25 encoder after successful ingestion
     if result['successful'] > 0:
         sparse_encoder.save(sparse_encoder_path)
-        print(f"\n✓ BM25 encoder saved to {sparse_encoder_path}")
+        print(f"\n[OK] BM25 encoder saved to {sparse_encoder_path}")
 
     # Print summary
     print("\n" + "="*60)
