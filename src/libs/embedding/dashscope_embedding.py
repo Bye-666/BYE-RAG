@@ -123,15 +123,20 @@ class DashScopeEmbedding(BaseEmbedding):
         self,
         texts: List[str],
         batch_size: int = 10,
+        max_retries: int = 3,
+        retry_delay: float = 1.0,
         **kwargs: Any
     ) -> List[List[float]]:
         """批量编码文本为向量
 
         DashScope API 限制每次最多 10 个文本，自动分批处理。
+        包含重试机制以处理网络不稳定。
 
         Args:
             texts: 输入文本列表
             batch_size: 每批处理的文本数量，默认 10（DashScope 限制）
+            max_retries: 最大重试次数，默认 3
+            retry_delay: 重试延迟（秒），默认 1.0
             **kwargs: 其他编码参数
 
         Returns:
@@ -141,6 +146,7 @@ class DashScopeEmbedding(BaseEmbedding):
             Exception: API 调用失败时抛出异常
         """
         from dashscope import TextEmbedding
+        import time
 
         # 合并参数
         embedding_kwargs = {**self.kwargs, **kwargs}
@@ -153,30 +159,51 @@ class DashScopeEmbedding(BaseEmbedding):
         for i in range(0, len(texts), max_batch_size):
             batch = texts[i:i + max_batch_size]
 
-            # 调用 API（批量）
-            response = TextEmbedding.call(
-                model=self.model,
-                input=batch,
-                **embedding_kwargs
-            )
+            # 重试机制
+            last_error = None
+            for attempt in range(max_retries):
+                try:
+                    # 调用 API（批量）
+                    response = TextEmbedding.call(
+                        model=self.model,
+                        input=batch,
+                        **embedding_kwargs
+                    )
 
-            # 检查响应
-            if response.status_code != 200:
-                raise Exception(
-                    f"DashScope API 调用失败: {response.code} - {response.message}"
-                )
+                    # 检查响应
+                    if response.status_code != 200:
+                        raise Exception(
+                            f"DashScope API 调用失败: {response.code} - {response.message}"
+                        )
 
-            # 提取向量列表（response.output 是字典）
-            embeddings = response.output.get('embeddings', [])
-            if not embeddings:
-                raise Exception("DashScope API 返回空的 embeddings")
+                    # 提取向量列表（response.output 是字典）
+                    embeddings = response.output.get('embeddings', [])
+                    if not embeddings:
+                        raise Exception("DashScope API 返回空的 embeddings")
 
-            # 添加到结果（可能是对象或字典）
-            for emb in embeddings:
-                if isinstance(emb, dict):
-                    all_embeddings.append(emb.get('embedding', []))
-                else:
-                    all_embeddings.append(emb.embedding)
+                    # 添加到结果（可能是对象或字典）
+                    for emb in embeddings:
+                        if isinstance(emb, dict):
+                            all_embeddings.append(emb.get('embedding', []))
+                        else:
+                            all_embeddings.append(emb.embedding)
+
+                    # 成功，跳出重试循环
+                    break
+
+                except Exception as e:
+                    last_error = e
+                    if attempt < max_retries - 1:
+                        # 还有重试机会，等待后重试
+                        print(f"API 调用失败 (尝试 {attempt + 1}/{max_retries}): {e}")
+                        time.sleep(retry_delay * (attempt + 1))  # 指数退避
+                    else:
+                        # 已达到最大重试次数
+                        raise Exception(f"API 调用失败，已重试 {max_retries} 次: {last_error}")
+
+            # 批次之间添加小延迟，避免请求过快
+            if i + max_batch_size < len(texts):
+                time.sleep(0.1)
 
         return all_embeddings
 
