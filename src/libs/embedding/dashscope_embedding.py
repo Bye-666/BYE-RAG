@@ -122,12 +122,16 @@ class DashScopeEmbedding(BaseEmbedding):
     def encode_batch(
         self,
         texts: List[str],
+        batch_size: int = 20,
         **kwargs: Any
     ) -> List[List[float]]:
         """批量编码文本为向量
 
+        DashScope API 限制每次最多 20 个文本，自动分批处理。
+
         Args:
             texts: 输入文本列表
+            batch_size: 每批处理的文本数量，默认 20（DashScope 限制）
             **kwargs: 其他编码参数
 
         Returns:
@@ -141,32 +145,40 @@ class DashScopeEmbedding(BaseEmbedding):
         # 合并参数
         embedding_kwargs = {**self.kwargs, **kwargs}
 
-        # 调用 API（批量）
-        response = TextEmbedding.call(
-            model=self.model,
-            input=texts,
-            **embedding_kwargs
-        )
+        # 限制批量大小不超过 20
+        max_batch_size = min(batch_size, 20)
 
-        # 检查响应
-        if response.status_code != 200:
-            raise Exception(
-                f"DashScope API 调用失败: {response.code} - {response.message}"
+        # 分批处理
+        all_embeddings = []
+        for i in range(0, len(texts), max_batch_size):
+            batch = texts[i:i + max_batch_size]
+
+            # 调用 API（批量）
+            response = TextEmbedding.call(
+                model=self.model,
+                input=batch,
+                **embedding_kwargs
             )
 
-        # 提取向量列表（response.output 是字典）
-        embeddings = response.output.get('embeddings', [])
-        if not embeddings:
-            raise Exception("DashScope API 返回空的 embeddings")
+            # 检查响应
+            if response.status_code != 200:
+                raise Exception(
+                    f"DashScope API 调用失败: {response.code} - {response.message}"
+                )
 
-        # 返回向量列表（可能是对象或字典）
-        result = []
-        for emb in embeddings:
-            if isinstance(emb, dict):
-                result.append(emb.get('embedding', []))
-            else:
-                result.append(emb.embedding)
-        return result
+            # 提取向量列表（response.output 是字典）
+            embeddings = response.output.get('embeddings', [])
+            if not embeddings:
+                raise Exception("DashScope API 返回空的 embeddings")
+
+            # 添加到结果（可能是对象或字典）
+            for emb in embeddings:
+                if isinstance(emb, dict):
+                    all_embeddings.append(emb.get('embedding', []))
+                else:
+                    all_embeddings.append(emb.embedding)
+
+        return all_embeddings
 
     @property
     def dimension(self) -> int:
