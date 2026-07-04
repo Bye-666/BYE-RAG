@@ -119,14 +119,14 @@ class BM25SparseEncoder:
         try:
             import jieba
             # jieba 分词，返回词语列表
-            terms = list(jieba.cut(text.lower()))
+            terms = list(jieba.cut(text))
             # 过滤空字符串和单字符（保留多字词）
             terms = [term.strip() for term in terms if term.strip() and len(term.strip()) > 1]
             return terms
         except ImportError:
             # jieba 未安装，使用空格分词
             print("[WARNING] jieba not installed, using whitespace tokenization. Install with: pip install jieba")
-            return text.lower().split()
+            return text.split()
 
     def save(self, path: str | Path):
         """Persist vocabulary and IDF to disk.

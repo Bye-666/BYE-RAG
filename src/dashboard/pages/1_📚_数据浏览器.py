@@ -4,6 +4,8 @@ import streamlit as st
 import pandas as pd
 from pathlib import Path
 import sys
+import json
+from datetime import datetime
 
 project_root = Path(__file__).parent.parent.parent.parent
 sys.path.insert(0, str(project_root))
@@ -47,6 +49,60 @@ try:
 
 except Exception as e:
     st.error(f"获取统计信息失败: {str(e)}")
+
+st.markdown("---")
+
+# Ingestion Records
+st.subheader("📋 摄取记录")
+
+try:
+    records_file = Path("data/ingestion_records.json")
+    if records_file.exists():
+        with open(records_file, 'r', encoding='utf-8') as f:
+            records = json.load(f)
+
+        if records:
+            # Convert to DataFrame
+            df_records = pd.DataFrame(records)
+
+            # Format columns
+            if 'ingested_at' in df_records.columns:
+                df_records['摄取时间'] = pd.to_datetime(df_records['ingested_at']).dt.strftime('%Y-%m-%d %H:%M:%S')
+            if 'file_size' in df_records.columns:
+                df_records['文件大小'] = df_records['file_size'].apply(lambda x: f"{x/1024:.1f} KB" if pd.notna(x) else "N/A")
+
+            # Select and rename columns
+            display_df = df_records[['document_name', 'status', 'chunks_created', 'chunks_uploaded', '文件大小', '摄取时间']].copy()
+            display_df.columns = ['文档名称', '状态', '分块数', '已上传', '文件大小', '摄取时间']
+
+            st.dataframe(display_df, use_container_width=True)
+
+            # Document files
+            st.markdown("### 📁 已保存的文档")
+            documents_dir = Path("data/documents")
+            if documents_dir.exists():
+                doc_files = list(documents_dir.glob("*.pdf"))
+                if doc_files:
+                    for doc_file in doc_files:
+                        col1, col2, col3 = st.columns([3, 1, 1])
+                        with col1:
+                            st.write(f"📄 {doc_file.name}")
+                        with col2:
+                            st.write(f"{doc_file.stat().st_size / 1024:.1f} KB")
+                        with col3:
+                            if st.button("删除", key=f"del_{doc_file.name}"):
+                                doc_file.unlink()
+                                st.rerun()
+                else:
+                    st.info("暂无保存的文档文件")
+            else:
+                st.info("文档目录不存在")
+        else:
+            st.info("暂无摄取记录")
+    else:
+        st.info("暂无摄取记录文件")
+except Exception as e:
+    st.error(f"读取摄取记录失败: {str(e)}")
 
 st.markdown("---")
 

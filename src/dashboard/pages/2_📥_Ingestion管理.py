@@ -124,6 +124,40 @@ if uploaded_file is not None:
                 with col2:
                     st.metric("上传的数据块", result["chunks_uploaded"])
 
+                # Save document to permanent location
+                import shutil
+                import json
+                from datetime import datetime
+
+                documents_dir = Path("data/documents")
+                documents_dir.mkdir(parents=True, exist_ok=True)
+                permanent_path = documents_dir / uploaded_file.name
+
+                # Copy file to permanent location
+                shutil.copy2(temp_path, permanent_path)
+
+                # Save ingestion record
+                records_file = Path("data/ingestion_records.json")
+                records = []
+                if records_file.exists():
+                    with open(records_file, 'r', encoding='utf-8') as f:
+                        records = json.load(f)
+
+                record = {
+                    "document_name": uploaded_file.name,
+                    "document_path": str(permanent_path),
+                    "file_size": uploaded_file.size,
+                    "status": "success",
+                    "chunks_created": result["chunks_processed"],
+                    "chunks_uploaded": result["chunks_uploaded"],
+                    "ingested_at": datetime.now().isoformat(),
+                    "trace_id": get_trace_recorder().get_traces(trace_type="ingestion", limit=1)[0].get("trace_id") if get_trace_recorder().get_traces(trace_type="ingestion", limit=1) else None
+                }
+                records.append(record)
+
+                with open(records_file, 'w', encoding='utf-8') as f:
+                    json.dump(records, f, indent=2, ensure_ascii=False)
+
                 # Show trace
                 traces = get_trace_recorder().get_traces(trace_type="ingestion", limit=1)
                 if traces:
@@ -135,6 +169,8 @@ if uploaded_file is not None:
         except Exception as e:
             st.error(f"摄取过程出错: {str(e)}")
             st.code(str(e))
+            import traceback
+            st.code(traceback.format_exc())
 
         finally:
             # Cleanup temp file
