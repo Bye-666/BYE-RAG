@@ -141,18 +141,21 @@ config_col1, config_col2 = st.columns(2)
 
 with config_col1:
     st.markdown("**向量存储配置**")
+    vector_store_config = st.session_state.config.get("vector_store", {})
     st.json({
-        "uri": st.session_state.config.get("milvus.uri", "未配置"),
-        "collection": st.session_state.config.get("milvus.collection_name", "未配置"),
-        "dense_dim": st.session_state.config.get("milvus.dense_dim", 0)
+        "uri": vector_store_config.get("uri", "未配置"),
+        "collection": vector_store_config.get("collection_name", "未配置"),
+        "dense_dim": vector_store_config.get("dense_dim", 0)
     })
 
 with config_col2:
     st.markdown("**模型配置**")
-    api_key = st.session_state.config.get("llm.api_key", "")
+    llm_config = st.session_state.config.get("llm", {})
+    embedding_config = st.session_state.config.get("embedding", {})
+    api_key = llm_config.get("api_key", "")
     st.json({
-        "llm": st.session_state.config.get("llm.model", "未配置"),
-        "embedding": st.session_state.config.get("embedding.model", "未配置"),
+        "llm": llm_config.get("model", "未配置"),
+        "embedding": embedding_config.get("model", "未配置"),
         "api_key": "***" + api_key[-4:] if api_key else "未配置"
     })
 

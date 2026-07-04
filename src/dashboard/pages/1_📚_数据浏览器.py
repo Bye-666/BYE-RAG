@@ -69,7 +69,7 @@ try:
                 metadata = result.get("metadata", {})
                 docs[doc_id] = {
                     "文档ID": doc_id,
-                    "文件路径": metadata.get("file_path", "未知"),
+                    "文件名": metadata.get("filename", "未知"),
                     "数据块数": 1
                 }
             elif doc_id:
@@ -89,7 +89,7 @@ try:
             selected_doc = st.selectbox(
                 "选择文档查看详情",
                 options=list(docs.keys()),
-                format_func=lambda x: docs[x]["文件路径"]
+                format_func=lambda x: docs[x]["文件名"]
             )
 
             if selected_doc:
