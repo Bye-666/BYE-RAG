@@ -244,18 +244,54 @@ class MCPServer:
                 }
                 return [TextContent(type="text", text=json.dumps(result, indent=2))]
 
-            # Train BM25 encoder if not already trained
-            if not self.sparse_encoder.vocab:
-                # Load and split document to train BM25
-                document = self.pdf_loader.load(path)
-                text_chunks = self.splitter.split(document.text)
-                self.sparse_encoder.fit(text_chunks)
+            # Load and split document
+            document = self.pdf_loader.load(path)
+            text_chunks = self.splitter.split(document.text)
+
+            # Create temporary encoder for this ingestion
+            temp_sparse_encoder = self.sparse_encoder.clone()
+
+            # Update temporary encoder with new document
+            if temp_sparse_encoder.vocab:
+                # Incremental update
+                try:
+                    new_count = temp_sparse_encoder.partial_fit(text_chunks)
+                    skipped = len(text_chunks) - new_count
+                except RuntimeError as e:
+                    # Old pickle format without incremental stats
+                    result = {
+                        "status": "error",
+                        "message": f"Cannot ingest: {str(e)}",
+                        "file_path": str(file_path),
+                        "note": "Please delete data/db/bm25_encoder.pkl and re-ingest all documents"
+                    }
+                    return [TextContent(type="text", text=json.dumps(result, indent=2))]
+            else:
+                # Initial training
+                temp_sparse_encoder.fit(text_chunks)
+                new_count = len(text_chunks)
+                skipped = 0
+
+            # Create temporary pipeline with updated encoder
+            from src.ingestion.batch_processor import BatchProcessor
+            temp_batch_processor = BatchProcessor(
+                dense_encoder=self.ingestion_pipeline.batch_processor.dense_encoder,
+                sparse_encoder=temp_sparse_encoder
+            )
+
+            # Temporarily replace batch processor
+            original_batch_processor = self.ingestion_pipeline.batch_processor
+            self.ingestion_pipeline.batch_processor = temp_batch_processor
 
             # Ingest document
             ingest_result = self.ingestion_pipeline.ingest_file(file_path)
 
+            # Restore original batch processor
+            self.ingestion_pipeline.batch_processor = original_batch_processor
+
             if ingest_result["success"]:
-                # Save BM25 encoder after successful ingestion
+                # Commit temporary encoder to persistent storage
+                self.sparse_encoder = temp_sparse_encoder
                 self.sparse_encoder.save(self.sparse_encoder_path)
 
                 result = {
@@ -263,7 +299,11 @@ class MCPServer:
                     "message": f"Document ingested successfully",
                     "file_path": str(file_path),
                     "chunks_processed": ingest_result["chunks_processed"],
-                    "chunks_uploaded": ingest_result["chunks_uploaded"]
+                    "chunks_uploaded": ingest_result["chunks_uploaded"],
+                    "bm25_new_chunks": new_count,
+                    "bm25_duplicates_skipped": skipped,
+                    "vocab_size": len(self.sparse_encoder.vocab),
+                    "total_documents": self.sparse_encoder.doc_count
                 }
             else:
                 result = {

@@ -57,36 +57,50 @@ if uploaded_file is not None:
         try:
             component_loader = st.session_state.component_loader
 
-            # Load BM25 encoder or create new
+            # Load BM25 encoder
             sparse_encoder_path = Path("data/db/bm25_encoder.pkl")
             if sparse_encoder_path.exists():
-                sparse_encoder = BM25SparseEncoder.load(sparse_encoder_path)
+                base_sparse_encoder = BM25SparseEncoder.load(sparse_encoder_path)
                 st.info("✓ 使用已有的 BM25 编码器")
             else:
-                sparse_encoder = BM25SparseEncoder()
+                base_sparse_encoder = BM25SparseEncoder()
                 sparse_encoder_path.parent.mkdir(parents=True, exist_ok=True)
-                st.info("→ 将在摄取后训练 BM25 编码器")
+                st.info("→ 将训练新的 BM25 编码器")
 
-            # First pass: Load and split to train BM25 if needed
-            if not sparse_encoder.vocab:
-                with st.spinner("准备训练 BM25 编码器..."):
-                    # Load and split document to get text corpus
-                    loader = PDFLoader()
-                    document = loader.load(temp_path)
-                    splitter = component_loader.get_splitter()
-                    text_chunks = splitter.split(document.text)
+            # Load and split document
+            with st.spinner("加载文档..."):
+                loader = PDFLoader()
+                document = loader.load(temp_path)
+                splitter = component_loader.get_splitter()
+                text_chunks = splitter.split(document.text)
 
-                    # Train BM25 on the corpus
-                    sparse_encoder.fit(text_chunks)
-                    st.success(f"✓ BM25 编码器已训练（词汇量: {len(sparse_encoder.vocab)}）")
+            # Create temporary encoder for this ingestion
+            temp_sparse_encoder = base_sparse_encoder.clone()
 
-            # Create pipeline
+            # Update temporary encoder
+            with st.spinner("准备 BM25 编码器..."):
+                if temp_sparse_encoder.vocab:
+                    # Incremental update
+                    try:
+                        new_count = temp_sparse_encoder.partial_fit(text_chunks)
+                        skipped = len(text_chunks) - new_count
+                        st.success(f"✓ BM25 编码器已准备：{new_count} 个新块，{skipped} 个重复块")
+                    except RuntimeError as e:
+                        st.error(f"❌ 无法更新 BM25 编码器: {str(e)}")
+                        st.info("请删除 data/db/bm25_encoder.pkl 并重新摄取所有文档")
+                        st.stop()
+                else:
+                    # Initial training
+                    temp_sparse_encoder.fit(text_chunks)
+                    st.success(f"✓ BM25 编码器已训练（词汇量: {len(temp_sparse_encoder.vocab)}）")
+
+            # Create pipeline with temporary encoder
             pipeline = IngestionPipeline(
                 loader=PDFLoader(),
                 splitter=component_loader.get_splitter(),
                 batch_processor=BatchProcessor(
                     dense_encoder=component_loader.get_embedding(),
-                    sparse_encoder=sparse_encoder
+                    sparse_encoder=temp_sparse_encoder
                 ),
                 vector_upserter=VectorUpserter(component_loader.get_vector_store()),
                 batch_size=batch_size,
@@ -111,12 +125,13 @@ if uploaded_file is not None:
                     enable_trace=True
                 )
 
-            # Save BM25 encoder
-            sparse_encoder.save(sparse_encoder_path)
-
             # Display results
             if result["success"]:
+                # Commit temporary encoder to disk after successful ingestion
+                temp_sparse_encoder.save(sparse_encoder_path)
+
                 st.success("✅ 摄取成功!")
+                st.info(f"📊 BM25 编码器已更新 - 词汇量: {len(temp_sparse_encoder.vocab)}，总文档数: {temp_sparse_encoder.doc_count}")
 
                 col1, col2 = st.columns(2)
                 with col1:

@@ -157,54 +157,58 @@ Examples:
         embedding = component_loader.get_embedding()
         splitter = component_loader.get_splitter()
         vector_store = component_loader.get_vector_store()
-        
+
         # Encoders
         dense_encoder = DenseEncoder(embedding)
-        
-        # Load or train sparse encoder
+
+        # Load sparse encoder
         sparse_encoder_path = Path("data/db/bm25_encoder.pkl")
         if sparse_encoder_path.exists():
             print(f"Loading BM25 encoder from {sparse_encoder_path}")
-            sparse_encoder = BM25SparseEncoder.load(sparse_encoder_path)
-
-            # Incrementally update with new documents
-            print("Updating BM25 encoder with new documents...")
-            all_texts = []
-            for file_path in files:
-                try:
-                    doc = loader.load(file_path)
-                    chunks = splitter.split(doc.text)
-                    all_texts.extend(chunks)
-                except Exception as e:
-                    print(f"Warning: Could not load {file_path} for BM25 update: {e}")
-
-            if all_texts:
-                sparse_encoder.partial_fit(all_texts)
-                print(f"[OK] BM25 encoder updated with {len(all_texts)} text chunks")
-                print(f"    Vocabulary size: {len(sparse_encoder.vocab)}, Total documents: {sparse_encoder.doc_count}")
+            base_sparse_encoder = BM25SparseEncoder.load(sparse_encoder_path)
         else:
-            print("BM25 encoder not found, training on documents...")
-            sparse_encoder = BM25SparseEncoder()
+            print("BM25 encoder not found, will train on new documents")
+            base_sparse_encoder = BM25SparseEncoder()
             sparse_encoder_path.parent.mkdir(parents=True, exist_ok=True)
 
-            # Collect all text chunks from files for training
-            all_texts = []
-            for file_path in files:
-                try:
-                    doc = loader.load(file_path)
-                    chunks = splitter.split(doc.text)
-                    all_texts.extend(chunks)
-                except Exception as e:
-                    print(f"Warning: Could not load {file_path} for BM25 training: {e}")
+        # Collect text chunks from new documents for BM25 update
+        print("Preparing BM25 encoder for new documents...")
+        all_texts = []
+        for file_path in files:
+            try:
+                doc = loader.load(file_path)
+                chunks = splitter.split(doc.text)
+                all_texts.extend(chunks)
+            except Exception as e:
+                print(f"Warning: Could not load {file_path} for BM25 preparation: {e}")
 
-            if all_texts:
-                sparse_encoder.fit(all_texts)
-                print(f"[OK] BM25 encoder trained on {len(all_texts)} text chunks")
-            else:
-                print("Warning: No texts available for BM25 training")
+        if not all_texts:
+            print("Warning: No text chunks available")
+            sys.exit(1)
 
-        # Batch processor and upserter
-        batch_processor = BatchProcessor(dense_encoder, sparse_encoder)
+        # Create temporary encoder for this ingestion
+        temp_sparse_encoder = base_sparse_encoder.clone()
+
+        # Update temporary encoder with new documents
+        if temp_sparse_encoder.vocab:
+            # Incremental update
+            try:
+                new_docs_count = temp_sparse_encoder.partial_fit(all_texts)
+                skipped_count = len(all_texts) - new_docs_count
+                print(f"[OK] Temporary BM25 encoder prepared: {new_docs_count} new chunks, {skipped_count} duplicates")
+                print(f"    Vocabulary size: {len(temp_sparse_encoder.vocab)}, Total documents: {temp_sparse_encoder.doc_count}")
+            except RuntimeError as e:
+                # Old pickle format - require full retrain
+                print(f"[ERROR] {e}")
+                print("[INFO] Please delete data/db/bm25_encoder.pkl and re-ingest all documents")
+                sys.exit(1)
+        else:
+            # Initial training
+            temp_sparse_encoder.fit(all_texts)
+            print(f"[OK] Temporary BM25 encoder trained on {len(all_texts)} text chunks")
+
+        # Batch processor and upserter use the temporary encoder
+        batch_processor = BatchProcessor(dense_encoder, temp_sparse_encoder)
         vector_upserter = VectorUpserter(vector_store)
         
         # Pipeline
@@ -227,10 +231,13 @@ Examples:
 
     result = pipeline.ingest_files(files, progress_callback=print_progress)
 
-    # Save BM25 encoder after successful ingestion
+    # Commit temporary encoder to disk only after successful ingestion
     if result['successful'] > 0:
-        sparse_encoder.save(sparse_encoder_path)
-        print(f"\n[OK] BM25 encoder saved to {sparse_encoder_path}")
+        print(f"\n[OK] Successfully ingested {result['successful']} file(s)")
+        temp_sparse_encoder.save(sparse_encoder_path)
+        print(f"[OK] BM25 encoder saved to {sparse_encoder_path}")
+    else:
+        print("\n[WARNING] No files successfully ingested, BM25 encoder not updated")
 
     # Print summary
     print("\n" + "="*60)

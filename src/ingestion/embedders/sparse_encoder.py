@@ -2,6 +2,7 @@
 
 import math
 import pickle
+import hashlib
 from pathlib import Path
 from collections import Counter
 from typing import Dict, List, Any
@@ -38,9 +39,14 @@ class BM25SparseEncoder:
         self.doc_count: int = 0  # total number of documents
         self.term_doc_freq: Dict[str, int] = {}  # term -> document frequency (for incremental updates)
         self.total_doc_length: float = 0  # sum of all document lengths (for avgdl calculation)
+        self.doc_hashes: set = set()  # document content hashes for deduplication
+        self._incremental_stats_available: bool = True  # whether incremental stats are reliable
 
     def fit(self, documents: List[str]):
         """Train on document collection to build vocabulary and IDF.
+
+        This method resets all state and trains from scratch.
+        For incremental updates, use partial_fit() instead.
 
         Args:
             documents: List of text documents
@@ -48,11 +54,26 @@ class BM25SparseEncoder:
         if not documents:
             raise ValueError("Cannot fit on empty document list")
 
+        # Reset all state
+        self.vocab = {}
+        self.idf = {}
+        self.term_doc_freq = {}
+        self.total_doc_length = 0
+        self.doc_count = 0
+        self.avgdl = 0
+        self.doc_hashes = set()
+
         doc_lengths = []
         term_doc_freq = Counter()  # count documents containing each term
 
         # Count term frequencies and document lengths
         for doc in documents:
+            # Compute document hash for deduplication
+            doc_hash = hashlib.sha256(doc.encode('utf-8')).hexdigest()
+            if doc_hash in self.doc_hashes:
+                continue  # Skip duplicate document
+            self.doc_hashes.add(doc_hash)
+
             terms = self._tokenize(doc)
             doc_lengths.append(len(terms))
             unique_terms = set(terms)
@@ -63,7 +84,7 @@ class BM25SparseEncoder:
                     self.vocab[term] = len(self.vocab)
                 term_doc_freq[term] += 1
 
-        self.doc_count = len(documents)
+        self.doc_count = len(doc_lengths)
         self.avgdl = sum(doc_lengths) / self.doc_count if self.doc_count > 0 else 0
         self.total_doc_length = sum(doc_lengths)
         self.term_doc_freq = dict(term_doc_freq)
@@ -79,18 +100,40 @@ class BM25SparseEncoder:
 
         This method allows adding new documents without retraining from scratch.
         New terms are added to vocabulary, and IDF values are recalculated for all terms.
+        Duplicate documents (by content hash) are automatically skipped.
 
         Args:
             documents: List of new text documents to add
+
+        Returns:
+            int: Number of new (non-duplicate) documents processed
+
+        Raises:
+            RuntimeError: If incremental stats are not available (loaded from old pickle format)
         """
+        if not self._incremental_stats_available:
+            raise RuntimeError(
+                "Incremental update not available: this encoder was loaded from an old pickle format "
+                "without term_doc_freq and doc_hashes. Please retrain from scratch using fit() with "
+                "all documents, or delete the old encoder file and re-ingest all documents."
+            )
+
         if not documents:
-            return
+            return 0
 
         # Process new documents
         new_doc_lengths = []
         new_term_doc_freq = Counter()
+        skipped_count = 0
 
         for doc in documents:
+            # Compute document hash for deduplication
+            doc_hash = hashlib.sha256(doc.encode('utf-8')).hexdigest()
+            if doc_hash in self.doc_hashes:
+                skipped_count += 1
+                continue  # Skip duplicate document
+            self.doc_hashes.add(doc_hash)
+
             terms = self._tokenize(doc)
             new_doc_lengths.append(len(terms))
             unique_terms = set(terms)
@@ -101,8 +144,11 @@ class BM25SparseEncoder:
                     self.vocab[term] = len(self.vocab)
                 new_term_doc_freq[term] += 1
 
+        if not new_doc_lengths:
+            return 0  # All documents were duplicates
+
         # Update statistics
-        self.doc_count += len(documents)
+        self.doc_count += len(new_doc_lengths)
         self.total_doc_length += sum(new_doc_lengths)
         self.avgdl = self.total_doc_length / self.doc_count if self.doc_count > 0 else 0
 
@@ -115,6 +161,8 @@ class BM25SparseEncoder:
             df = self.term_doc_freq.get(term, 0)
             idf_value = math.log((self.doc_count - df + 0.5) / (df + 0.5) + 1)
             self.idf[term_id] = idf_value
+
+        return len(new_doc_lengths)
 
     def encode(self, text: str) -> Dict[int, float]:
         """Encode text into sparse vector.
@@ -176,13 +224,13 @@ class BM25SparseEncoder:
 
     def save(self, path: str | Path):
         """Persist vocabulary and IDF to disk.
-        
+
         Args:
             path: Path to save file
         """
         path = Path(path)
         path.parent.mkdir(parents=True, exist_ok=True)
-        
+
         with open(path, 'wb') as f:
             pickle.dump({
                 'vocab': self.vocab,
@@ -190,29 +238,96 @@ class BM25SparseEncoder:
                 'avgdl': self.avgdl,
                 'doc_count': self.doc_count,
                 'k1': self.k1,
-                'b': self.b
+                'b': self.b,
+                'term_doc_freq': self.term_doc_freq,
+                'total_doc_length': self.total_doc_length,
+                'doc_hashes': self.doc_hashes
             }, f)
 
     @classmethod
     def load(cls, path: str | Path) -> 'BM25SparseEncoder':
         """Load trained encoder from disk.
-        
+
         Args:
             path: Path to saved encoder file
-            
+
         Returns:
             Loaded encoder instance
         """
         path = Path(path)
         if not path.exists():
             raise FileNotFoundError(f"Encoder file not found: {path}")
-        
+
         with open(path, 'rb') as f:
             data = pickle.load(f)
-        
+
         encoder = cls(k1=data['k1'], b=data['b'])
         encoder.vocab = data['vocab']
         encoder.idf = data['idf']
         encoder.avgdl = data['avgdl']
         encoder.doc_count = data['doc_count']
+
+        # Check if this is an old pickle format without incremental stats
+        has_term_doc_freq = 'term_doc_freq' in data
+        has_doc_hashes = 'doc_hashes' in data
+
+        if has_term_doc_freq and has_doc_hashes:
+            # New format: full incremental stats available
+            encoder.term_doc_freq = data['term_doc_freq']
+            encoder.total_doc_length = data['total_doc_length']
+            encoder.doc_hashes = data['doc_hashes']
+            encoder._incremental_stats_available = True
+        else:
+            # Old format: missing incremental stats
+            encoder.term_doc_freq = {}
+            encoder.total_doc_length = encoder.avgdl * encoder.doc_count
+            encoder.doc_hashes = set()
+            encoder._incremental_stats_available = False
+            print("[WARNING] Loaded BM25 encoder from old format without incremental stats.")
+            print("          Incremental updates (partial_fit) are disabled.")
+            print("          To enable incremental updates, retrain from scratch:")
+            print("          1. Delete data/db/bm25_encoder.pkl")
+            print("          2. Re-run ingestion on all documents")
+
+        return encoder
+
+    def clone(self) -> 'BM25SparseEncoder':
+        """Create a deep copy of this encoder.
+
+        Returns:
+            New encoder instance with copied state
+        """
+        cloned = BM25SparseEncoder(k1=self.k1, b=self.b)
+        cloned.vocab = self.vocab.copy()
+        cloned.idf = self.idf.copy()
+        cloned.avgdl = self.avgdl
+        cloned.doc_count = self.doc_count
+        cloned.term_doc_freq = self.term_doc_freq.copy()
+        cloned.total_doc_length = self.total_doc_length
+        cloned.doc_hashes = self.doc_hashes.copy()
+        cloned._incremental_stats_available = self._incremental_stats_available
+        return cloned
+
+        # Check if this is an old pickle format without incremental stats
+        has_term_doc_freq = 'term_doc_freq' in data
+        has_doc_hashes = 'doc_hashes' in data
+
+        if has_term_doc_freq and has_doc_hashes:
+            # New format: full incremental stats available
+            encoder.term_doc_freq = data['term_doc_freq']
+            encoder.total_doc_length = data['total_doc_length']
+            encoder.doc_hashes = data['doc_hashes']
+            encoder._incremental_stats_available = True
+        else:
+            # Old format: missing incremental stats
+            encoder.term_doc_freq = {}
+            encoder.total_doc_length = encoder.avgdl * encoder.doc_count
+            encoder.doc_hashes = set()
+            encoder._incremental_stats_available = False
+            print("[WARNING] Loaded BM25 encoder from old format without incremental stats.")
+            print("          Incremental updates (partial_fit) are disabled.")
+            print("          To enable incremental updates, retrain from scratch:")
+            print("          1. Delete data/db/bm25_encoder.pkl")
+            print("          2. Re-run ingestion on all documents")
+
         return encoder
