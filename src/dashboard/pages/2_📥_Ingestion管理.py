@@ -53,6 +53,39 @@ if uploaded_file is not None:
     st.success(f"文件已上传: {uploaded_file.name}")
 
     if st.button("🚀 开始摄取", type="primary"):
+        # Check if file already exists
+        documents_dir = Path("data/documents")
+        documents_dir.mkdir(parents=True, exist_ok=True)
+        permanent_path = documents_dir / uploaded_file.name
+
+        if permanent_path.exists():
+            st.warning(f"⚠️ 文件已存在: {uploaded_file.name}")
+            st.info("该文件已在之前上传过。如需重新摄取，请先删除旧文件。")
+
+            # Check ingestion records
+            records_file = Path("data/ingestion_records.json")
+            if records_file.exists():
+                import json
+                with open(records_file, 'r', encoding='utf-8') as f:
+                    records = json.load(f)
+
+                # Find record for this file
+                for record in reversed(records):
+                    if record.get("document_name") == uploaded_file.name:
+                        from datetime import datetime
+                        ingested_at = record.get("ingested_at", "未知")
+                        try:
+                            dt = datetime.fromisoformat(ingested_at)
+                            ingested_at = dt.strftime("%Y-%m-%d %H:%M:%S")
+                        except:
+                            pass
+
+                        st.info(f"📅 上次摄取时间: {ingested_at}")
+                        st.info(f"📊 数据块数量: {record.get('chunks_uploaded', 0)}")
+                        break
+
+            st.stop()
+
         # Initialize pipeline
         try:
             component_loader = st.session_state.component_loader
