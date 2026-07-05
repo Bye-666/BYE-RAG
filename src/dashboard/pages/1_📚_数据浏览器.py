@@ -84,15 +84,12 @@ try:
                 doc_files = list(documents_dir.glob("*.pdf"))
                 if doc_files:
                     for doc_file in doc_files:
-                        col1, col2, col3 = st.columns([3, 1, 1])
+                        col1, col2 = st.columns([3, 1])
                         with col1:
                             st.write(f"📄 {doc_file.name}")
                         with col2:
                             st.write(f"{doc_file.stat().st_size / 1024:.1f} KB")
-                        with col3:
-                            if st.button("删除", key=f"del_{doc_file.name}"):
-                                doc_file.unlink()
-                                st.rerun()
+                    st.info("💡 请在下方「按文档分组」列表中删除文档")
                 else:
                     st.info("暂无保存的文档文件")
             else:
@@ -132,10 +129,71 @@ try:
                 docs[doc_id]["数据块数"] += 1
 
         if docs:
-            # Display as table
+            # Display as table with delete buttons
             st.subheader("📄 按文档分组")
-            df = pd.DataFrame(list(docs.values()))
-            st.dataframe(df, use_container_width=True)
+
+            for doc_id, doc_info in docs.items():
+                col1, col2, col3, col4 = st.columns([3, 1, 1, 1])
+                with col1:
+                    st.write(f"📄 {doc_info['文件名']}")
+                with col2:
+                    st.write(f"{doc_info['数据块数']} 块")
+                with col3:
+                    st.write(f"ID: {doc_id[:8]}...")
+                with col4:
+                    if st.button("删除", key=f"del_{doc_id}"):
+                        try:
+                            # Query all chunks for this document
+                            chunk_results = vector_store.query(
+                                expr=f'doc_id == "{doc_id}"',
+                                limit=10000
+                            )
+
+                            chunks_deleted = 0
+                            if chunk_results:
+                                # Extract chunk IDs
+                                chunk_ids = [result["id"] for result in chunk_results]
+                                chunks_deleted = len(chunk_ids)
+
+                                # Delete from vector store
+                                vector_store.delete(chunk_ids)
+
+                                # Verify deletion
+                                remaining = vector_store.query(
+                                    expr=f'doc_id == "{doc_id}"',
+                                    limit=1
+                                )
+
+                                if remaining:
+                                    st.error(f"❌ 向量库仍有残留，删除未完成")
+                                    st.stop()
+
+                            # Delete file if it exists
+                            documents_dir = Path("data/documents")
+                            doc_file = documents_dir / doc_info['文件名']
+                            if doc_file.exists():
+                                doc_file.unlink()
+
+                            # Update ingestion records
+                            records_file = Path("data/ingestion_records.json")
+                            if records_file.exists():
+                                with open(records_file, 'r', encoding='utf-8') as f:
+                                    records = json.load(f)
+
+                                # Remove record for this file
+                                records = [r for r in records if r.get("document_name") != doc_info['文件名']]
+
+                                with open(records_file, 'w', encoding='utf-8') as f:
+                                    json.dump(records, f, indent=2, ensure_ascii=False)
+
+                            st.success(f"✅ 已删除文档 {doc_info['文件名']}")
+                            st.info(f"📊 删除了 {chunks_deleted} 个向量数据块")
+                            st.rerun()
+
+                        except Exception as e:
+                            st.error(f"❌ 删除失败: {str(e)}")
+                            import traceback
+                            st.code(traceback.format_exc())
 
             st.markdown("---")
 

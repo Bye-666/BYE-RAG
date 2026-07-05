@@ -538,20 +538,23 @@ class MilvusStore(BaseVectorStore):
         if not ids:
             return
 
-        # 构建过滤表达式
-        id_list_str = ", ".join([f'"{id_}"' for id_ in ids])
-        filter_expr = f"id in [{id_list_str}]"
-
         if self._lite_server is not None:
             # Milvus Lite 模式
             try:
                 collection = self._lite_server.get_collection(self.collection_name)
-                collection.delete(expr=filter_expr)
+                # milvus_lite Collection.delete() 接受主键列表，不是表达式
+                result = collection.delete(pks=ids)
+                print(f"[INFO] Deleted {result} records from Milvus Lite")
             except Exception as e:
                 print(f"Delete error in Milvus Lite: {e}")
+                import traceback
+                traceback.print_exc()
                 raise
         else:
-            # 标准 Milvus 模式
+            # 标准 Milvus 模式 - MilvusClient.delete() 使用 filter 表达式
+            id_list_str = ", ".join([f'"{id_}"' for id_ in ids])
+            filter_expr = f"id in [{id_list_str}]"
+
             self.client.delete(
                 collection_name=self.collection_name,
                 filter=filter_expr
