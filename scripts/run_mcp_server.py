@@ -42,17 +42,18 @@ Examples:
     args = parser.parse_args()
 
     # Initialize and run server
-    print("Starting RAG MCP Server...")
-    print(f"Config: {args.config}")
-    print("-" * 60)
+    # Print to stderr to avoid breaking stdio MCP protocol
+    print("Starting RAG MCP Server...", file=sys.stderr)
+    print(f"Config: {args.config}", file=sys.stderr)
+    print("-" * 60, file=sys.stderr)
 
     try:
         server = MCPServer(config_path=args.config)
         server.run()
     except KeyboardInterrupt:
-        print("\nServer stopped by user")
+        print("\nServer stopped by user", file=sys.stderr)
     except Exception as e:
-        print(f"Error starting server: {e}")
+        print(f"Error starting server: {e}", file=sys.stderr)
         sys.exit(1)
 
 
